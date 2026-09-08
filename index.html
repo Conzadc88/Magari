@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#16a34a">
+  <title>Magazzino Pizzeria</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Magazzino & Sprechi</h1>
+    <p class="subtitle">Gestione Rapida Banco</p>
+  </header>
+
+  <!-- Sezione Giacenze attuali -->
+  <section class="card">
+    <h2>Giacenze Attuali</h2>
+    <div id="stock-list">
+      <!-- Generato dinamicamente -->
+    </div>
+  </section>
+
+  <!-- Tasti rapidi di registrazione sprechi -->
+  <section class="card">
+    <h2>Registra Spreco / Scarto</h2>
+    <div class="grid">
+      <button class="btn btn-danger" onclick="registraAzione('Fior di Latte', -0.100, 'Spreco')">-100g Mozzarella</button>
+      <button class="btn btn-danger" onclick="registraAzione('Pomodoro', -0.090, 'Spreco')">-90g Pomodoro</button>
+      <button class="btn btn-danger" onclick="registraAzione('Impasto', -0.250, 'Scarto')">-1 Pallina Impasto</button>
+      <button class="btn btn-danger" onclick="registraAzione('Olio EVO', -0.010, 'Spreco')">-10g Olio EVO</button>
+    </div>
+  </section>
+
+  <!-- Tasti rapidi carico merce -->
+  <section class="card">
+    <h2>Carico Rapido Merce</h2>
+    <div class="grid">
+      <button class="btn btn-success" onclick="registraAzione('Fior di Latte', 5.0, 'Carico')">+5 kg Mozzarella</button>
+      <button class="btn btn-success" onclick="registraAzione('Pomodoro', 10.0, 'Carico')">+10 kg Pomodoro</button>
+      <button class="btn btn-success" onclick="registraAzione('Impasto', 12.5, 'Carico')">+50 Palline Impasto</button>
+      <button class="btn btn-secondary" onclick="resetStock()">Ripristina Stock</button>
+    </div>
+  </section>
+
+  <!-- Registro attività -->
+  <section class="card">
+    <h2>Registro Attività</h2>
+    <div id="log-list"></div>
+  </section>
+
+  <script>
+    // Inizializzazione dati di base
+    const defaultStock = {
+      'Fior di Latte': 15.0,
+      'Pomodoro': 20.0,
+      'Impasto': 30.0,
+      'Olio EVO': 5.0
+    };
+
+    let stock = JSON.parse(localStorage.getItem('pizzeria_stock')) || defaultStock;
+    let logs = JSON.parse(localStorage.getItem('pizzeria_logs')) || [];
+
+    function salvaDati() {
+      localStorage.setItem('pizzeria_stock', JSON.stringify(stock));
+      localStorage.setItem('pizzeria_logs', JSON.stringify(logs));
+      aggiornaInterfaccia();
+    }
+
+    function aggiornaInterfaccia() {
+      const stockContainer = document.getElementById('stock-list');
+      stockContainer.innerHTML = '';
+      for (const [ingrediente, qta] of Object.entries(stock)) {
+        const item = document.createElement('div');
+        item.className = 'stock-item';
+        item.innerHTML = `<span>${ingrediente}</span> <span class="stock-val">${qta.toFixed(2)} kg</span>`;
+        stockContainer.appendChild(item);
+      }
+
+      const logContainer = document.getElementById('log-list');
+      logContainer.innerHTML = '';
+      logs.slice(0, 5).forEach(entry => {
+        const item = document.createElement('div');
+        item.className = 'log-item';
+        item.innerHTML = `<b>${entry.ora}</b> - ${entry.tipo}: ${entry.qta > 0 ? '+' : ''}${entry.qta} kg di ${entry.ingrediente}`;
+        logContainer.appendChild(item);
+      });
+    }
+
+    function registraAzione(ingrediente, quantita, tipo) {
+      if (stock[ingrediente] !== undefined) {
+        stock[ingrediente] = Math.max(0, stock[ingrediente] + quantita);
+        const ora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        logs.unshift({ ora, ingrediente, qta: quantita, tipo });
+        salvaDati();
+      }
+    }
+
+    function resetStock() {
+      if (confirm("Vuoi ripristinare i valori iniziali di magazzino?")) {
+        stock = { ...defaultStock };
+        logs = [];
+        salvaDati();
+      }
+    }
+
+    // Registrazione Service Worker per supporto Offline / PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+
+    aggiornaInterfaccia();
+  </script>
+</body>
+</html>
