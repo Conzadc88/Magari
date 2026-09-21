@@ -1,6 +1,6 @@
 <!--
 ====================================================================
-[MAGARI APP - VERSION 3.3.1 STABLE & DESKTOP]
+[MAGARI APP - VERSION 3.3.2 STABLE & DESKTOP - CLEANED]
 ====================================================================
 -->
 <!DOCTYPE html>
@@ -9,7 +9,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#043927">
-    <title>Magari v3.3.1 - Stable</title>
+    <title>Magari v3.3.2 - Stable</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -85,7 +85,7 @@
         <div class="drawer" id="drawer">
             <div class="drawer-header">
                 <div class="brand-title" style="font-size: 26px;">MAGARI</div>
-                <div class="brand-subtitle" style="font-size: 9px; letter-spacing: 2px;">v3.3.1 Stable & Desktop</div>
+                <div class="brand-subtitle" style="font-size: 9px; letter-spacing: 2px;">v3.3.2 Stable & Desktop</div>
             </div>
             <ul class="drawer-menu">
                 <li onclick="navigateTo('ordini')">🛒 Ordini</li>
@@ -102,7 +102,7 @@
             <button class="menu-btn" onclick="toggleMenu()">☰</button>
             <div class="header-brand-text">
                 <div class="brand-title">MAGARI</div>
-                <div class="brand-subtitle">v3.3.1 Stable & Desktop</div>
+                <div class="brand-subtitle">v3.3.2 Stable & Desktop</div>
             </div>
             <div class="page-badge" id="page-title">Ordini</div>
         </div>
@@ -111,6 +111,7 @@
             <span id="active-location-text">📍 Sede: Non selezionata</span>
             <button onclick="promptChangeLocation()" style="background: white; border: 1px solid #2e7d32; color: #2e7d32; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">Cambia Sede</button>
         </div>
+
         <!-- 1. SEZIONE ORDINI -->
         <div id="view-ordini" class="view-section active" data-requires-location="true">
             <div class="top-bar-container">
@@ -307,71 +308,26 @@
         <div class="form-group"><label>Email</label><input type="email" id="supp-email" class="form-control"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="closeAddSupplierModal()">Annulla</button><button class="btn-save" onclick="saveSupplier()">Salva</button></div>
     </div>
+
     <!-- SCRIPT LOGICA APPLICATIVA -->
     <script type="module">
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    // 1. Aggiungi l'import di Firebase Auth
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyAYoG8kDRoEE6AGhAStCvfwCwPZSHSl8j4",
-        authDomain: "magari-b7f93.firebaseapp.com",
-        projectId: "magari-b7f93",
-        storageBucket: "magari-b7f93.firebasestorage.app",
-        messagingSenderId: "135472598053",
-        appId: "1:135472598053:web:a3fd59a851fe99f51a03cc"
-    };
+        const firebaseConfig = {
+            apiKey: "AIzaSyAYoG8kDRoEE6AGhAStCvfwCwPZSHSl8j4",
+            authDomain: "magari-b7f93.firebaseapp.com",
+            projectId: "magari-b7f93",
+            storageBucket: "magari-b7f93.firebasestorage.app",
+            messagingSenderId: "135472598053",
+            appId: "1:135472598053:web:a3fd59a851fe99f51a03cc"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    // 2. Inizializza Auth
-    const auth = getAuth(app);
-    const appDocRef = doc(db, "magazzino_db", "dati");
-
-    window.appPin = null; 
-    window.isUnlocked = false; 
-    window.pendingPinAction = null;
-    window.activeLocation = null;
-
-    // 3. Esegui il login anonimo prima di ascoltare i dati
-    signInAnonymously(auth).catch((error) => console.error("Errore Auth Anonimo:", error));
-
-    // 4. Avvia l'ascolto su Firestore SOLO quando la sessione Auth è confermata
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            onSnapshot(appDocRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.data();
-                    
-                    // Parsing tollerante sia per array nativi che per oggetti JSON
-                    if (Array.isArray(data.inventory)) {
-                        window.inventoryData = data.inventory.map(item => typeof item === 'string' ? JSON.parse(item) : item);
-                    } else if (typeof data.inventory === 'string') {
-                        try { window.inventoryData = JSON.parse(data.inventory); } catch(e) { window.inventoryData = []; }
-                    } else {
-                        window.inventoryData = [];
-                    }
-
-                    if (Array.isArray(data.suppliers)) {
-                        window.suppliersData = data.suppliers.map(item => typeof item === 'string' ? JSON.parse(item) : item);
-                    } else if (typeof data.suppliers === 'string') {
-                        try { window.suppliersData = JSON.parse(data.suppliers); } catch(e) { window.suppliersData = []; }
-                    } else {
-                        window.suppliersData = [];
-                    }
-
-                    window.orderHistoryData = data.history || [];
-                    if (data.pin) window.appPin = String(data.pin);
-
-                    window.populateAllSupplierFilters();
-                    window.updatePinUI();
-                    window.refreshAllViews();
-                }
-            }, (err) => console.error("Errore Firestore:", err));
-        }
-    });
-
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appDocRef = doc(db, "magazzino_db", "dati");
 
         window.appPin = null; 
         window.isUnlocked = false; 
@@ -538,17 +494,35 @@
         window.inventoryData = [...window.defaultInventory];
         window.orderHistoryData = [];
 
-        onSnapshot(appDocRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.data();
-                if (data.suppliers) window.suppliersData = data.suppliers;
-                if (data.inventory) window.inventoryData = data.inventory;
-                if (data.history) window.orderHistoryData = data.history;
-                if (data.pin) window.appPin = String(data.pin);
+        // Gestione autenticazione anonima e ascolto Firestore unificati
+        signInAnonymously(auth).catch((error) => console.error("Errore Auth Anonimo:", error));
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                onSnapshot(appDocRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.data();
+                        
+                        if (Array.isArray(data.inventory)) {
+                            window.inventoryData = data.inventory.map(item => typeof item === 'string' ? JSON.parse(item) : item);
+                        } else if (typeof data.inventory === 'string') {
+                            try { window.inventoryData = JSON.parse(data.inventory); } catch(e) { window.inventoryData = []; }
+                        }
+
+                        if (Array.isArray(data.suppliers)) {
+                            window.suppliersData = data.suppliers.map(item => typeof item === 'string' ? JSON.parse(item) : item);
+                        } else if (typeof data.suppliers === 'string') {
+                            try { window.suppliersData = JSON.parse(data.suppliers); } catch(e) { window.suppliersData = []; }
+                        }
+
+                        if (data.history) window.orderHistoryData = data.history;
+                        if (data.pin) window.appPin = String(data.pin);
+                    }
+                    window.populateAllSupplierFilters();
+                    window.updatePinUI();
+                    window.refreshAllViews();
+                }, (err) => console.error("Errore Firestore:", err));
             }
-            window.populateAllSupplierFilters();
-            window.updatePinUI();
-            window.refreshAllViews();
         });
 
         window.saveDataToCloud = async function() {
@@ -581,7 +555,6 @@
             document.getElementById('page-title').innerText = titles[sec] || 'Magari';
             window.closeAll();
 
-            // PIN SEMPRE RICHIESTO PER LE SEZIONI RISERVATE: Reset stato ad ogni cambio sezione
             if (['magazzino', 'fornitori', 'sprechi', 'impostazioni'].includes(sec)) {
                 window.isUnlocked = false; 
                 checkSectionLock(sec);
@@ -686,11 +659,11 @@
             if (p1 !== p2) return alert("I PIN non coincidono.");
             
             window.appPin = String(p1); 
-            window.isUnlocked = false; // Mantiene il blocco attivo
+            window.isUnlocked = false; 
             saveDataToCloud(); 
             updatePinUI(); 
             closeSetPinModal(); 
-            alert("🔒 Nuovo PIN salvato con successo! Sarà richiesto ad ogni accesso alle sezioni protette.");
+            alert("🔒 Nuovo PIN salvato con successo!");
             navigateTo('impostazioni');
         };
 
