@@ -1,13 +1,12 @@
 <!--
 ====================================================================
-[MAGARI APP - VERSION 3.3.3 - STRICT PIN, SORTING & CLEAN CONFIRM]
+[MAGARI APP - VERSION 3.3.8 - SEPARATE EMAIL/WA TEXTS & LARGER FONTS]
 - App "Magari" - Gestionale ordini e scorte.
 - Firestore (magazzino_db/dati).
-- MODIFICHE INCLUSE:
-  1. Rimosso confirm() prima del riepilogo ordine.
-  2. PIN richiesto ad OGNI navigazione tra le sezioni riservate.
-  3. PIN obbligatorio sempre per l'azzeramento delle giacenze.
-  4. Aggiunto ordinamento (A-Z, Z-A, Giacenza Crescente/Decrescente, Esaurimenti) in Ordini e Scorte.
+- MODIFICHE:
+  1. Testo Email ottimizzato per Outlook (intestazioni trasparenti in MAIUSCOLO).
+  2. Testo WhatsApp con grassetto nativo (*...*).
+  3. Aumentata la dimensione e leggibilità dei testi nel riepilogo ordine.
 ====================================================================
 -->
 <!DOCTYPE html>
@@ -19,7 +18,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Magari">
-    <title>Magari v3.3.3 - Ordini, Scorte & Sicurezza PIN Strict</title>
+    <title>Magari v3.3.8 - Ordini & Scorte</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -108,17 +107,20 @@
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 150; }
         .overlay.active { display: block; }
 
-        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 380px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: none; z-index: 210; }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 92%; max-width: 480px; max-height: 88vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.25); display: none; z-index: 210; }
         .modal.active { display: block; }
-        .modal-title { font-size: 16px; font-weight: bold; margin-bottom: 12px; }
+        .modal-title { font-size: 19px; font-weight: bold; margin-bottom: 12px; }
         .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
-        .form-control { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background-color: white; }
+        .form-group label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; background-color: white; }
         .pin-input { letter-spacing: 12px; font-size: 24px !important; text-align: center; font-weight: bold; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-        .btn-cancel { background: #eee; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-        .btn-save { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-        .btn-danger { background: var(--danger); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        .btn-cancel { background: #eee; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-save { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-danger { background: var(--danger); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+
+        .toast-notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #263238; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.3); z-index: 9999; display: none; transition: opacity 0.3s ease; text-align: center; max-width: 90%; border-left: 4px solid var(--warning); }
+        .toast-notification.show { display: block; }
 
         .sticky-checkout-container { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; padding: 10px 16px 14px 16px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border-top: 1px solid var(--border); box-shadow: 0 -4px 10px rgba(0,0,0,0.08); z-index: 90; transition: max-width 0.3s ease; }
         .btn-checkout { width: 100%; background-color: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
@@ -136,11 +138,14 @@
             .sticky-checkout-container { max-width: 1200px; }
             .content-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
             .history-card, .empty-placeholder, .settings-card { grid-column: 1 / -1; }
-            .modal { max-width: 520px; }
+            .modal { max-width: 580px; }
         }
     </style>
 </head>
 <body>
+
+    <!-- NOTIFICA TOAST -->
+    <div id="toast-notification" class="toast-notification"></div>
 
     <!-- MODALE SELEZIONE SEDE -->
     <div class="page-lock-banner" id="location-guard-banner" style="display: flex;">
@@ -162,7 +167,7 @@
         <div class="drawer" id="drawer">
             <div class="drawer-header">
                 <div class="brand-title" style="font-size: 26px;">MAGARI</div>
-                <div class="brand-subtitle" style="font-size: 9px; letter-spacing: 2px;">v3.3.3 Strict PIN & Sorting</div>
+                <div class="brand-subtitle" style="font-size: 9px; letter-spacing: 2px;">v3.3.8 Clean Email & Larger Fonts</div>
             </div>
             <ul class="drawer-menu">
                 <li onclick="navigateTo('ordini')">🛒 Ordini</li>
@@ -179,7 +184,7 @@
             <button class="menu-btn" onclick="toggleMenu()">☰</button>
             <div class="header-brand-text">
                 <div class="brand-title">MAGARI</div>
-                <div class="brand-subtitle">v3.3.3 Strict PIN & Sorting</div>
+                <div class="brand-subtitle">v3.3.8 Clean Email & Larger Fonts</div>
             </div>
             <div class="page-badge" id="page-title">Ordini</div>
         </div>
@@ -194,7 +199,7 @@
             <div class="top-bar-container">
                 <input type="text" id="order-operator-name" class="operator-input" placeholder="👤 Nome Operatore (Chi ordina?)" required>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                    <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">📅 Data:</label>
+                    <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">🚚 Consegna Desiderata:</label>
                     <input type="date" id="order-date-picker" class="date-picker">
                 </div>
                 <div style="display: flex; gap: 8px;">
@@ -213,7 +218,6 @@
                     </select>
                     <select id="filter-order-supplier" class="filter-select" onchange="filterOrderItems()"><option value="">🚚 Tutti i Fornitori</option></select>
                 </div>
-                <!-- AGGIUNTO ORDINAMENTO ORDINI -->
                 <div style="display: flex; gap: 8px;">
                     <select id="sort-order-select" class="filter-select" onchange="filterOrderItems()">
                         <option value="low-stock">⚠️ Prima Scorte in Esaurimento</option>
@@ -251,7 +255,6 @@
                     </select>
                     <select id="filter-stock-supplier" class="filter-select" onchange="filterStockItems()"><option value="">🚚 Tutti i Fornitori</option></select>
                 </div>
-                <!-- AGGIUNTO ORDINAMENTO SCORTE -->
                 <div style="display: flex; gap: 8px;">
                     <select id="sort-stock-select" class="filter-select" onchange="filterStockItems()">
                         <option value="name-asc">🔤 Nome (A - Z)</option>
@@ -325,12 +328,12 @@
                 <div class="form-group" id="report-month-select-group" style="display:none;"><label>Mese:</label><input type="month" id="report-month-picker" class="form-control"></div>
                 <button class="btn-save" onclick="generateRealReport()" style="width:100%; padding:10px;">📋 Genera Report</button>
             </div>
-            <div id="report-results-container" style="display:none; background:white; padding:16px; border-radius:8px; margin:0 16px;">
+            <div id="report-results-container" style="display:none; background:white; padding:16px; border-radius:8px; margin:16px;">
                 <h3 id="report-title-display" style="font-size:14px; margin-bottom:10px; color:var(--primary);"></h3>
                 <div style="font-weight:bold; font-size:12px; color:#1e293b;">🍷 Alcolici & Bevande</div>
-                <table class="report-table" id="table-alcohol-report"><thead><tr><th>Prodotto</th><th>Qtà</th><th>Costo</th></tr></thead><tbody></tbody></table>
+                <table class="report-table" id="table-alcohol-report"><thead><tr><th>Prodotto</th><th>Qtà</th><th>Costo Totale</th></tr></thead><tbody></tbody></table>
                 <div style="font-weight:bold; font-size:12px; color:#1e293b; margin-top:10px;">🍕 Cibo & Consumabili</div>
-                <table class="report-table" id="table-food-report"><thead><tr><th>Prodotto</th><th>Qtà</th><th>Costo</th></tr></thead><tbody></tbody></table>
+                <table class="report-table" id="table-food-report"><thead><tr><th>Prodotto</th><th>Qtà</th><th>Costo Totale</th></tr></thead><tbody></tbody></table>
             </div>
         </div>
 
@@ -375,9 +378,9 @@
     </div>
 
     <div class="modal" id="summary-modal">
-        <div class="modal-title">📋 Riepilogo Ordine Generato</div>
+        <div class="modal-title" style="font-size:20px; color:var(--primary);">📋 Riepilogo Ordine Generato</div>
         <div id="summary-content"></div>
-        <div class="modal-actions" style="margin-top:12px;"><button class="btn-cancel" onclick="closeSummaryModal()">Chiudi</button></div>
+        <div class="modal-actions" style="margin-top:14px;"><button class="btn-cancel" onclick="closeSummaryModal()">Chiudi</button></div>
     </div>
 
     <div class="modal" id="add-modal">
@@ -428,6 +431,28 @@
         window.appPin = null; 
         window.pendingPinAction = null;
         window.activeLocation = null;
+        window.supplierNotesMap = {}; 
+
+        window.showAlert = function(msg) {
+            const toast = document.getElementById('toast-notification');
+            if (toast) {
+                toast.innerText = msg;
+                toast.classList.add('show');
+                setTimeout(() => { toast.classList.remove('show'); }, 3500);
+            }
+        };
+
+        window.translateUnitToSwedish = function(unit) {
+            const map = {
+                "Bottiglie": "flaskor",
+                "Unità": "st",
+                "Kg": "kg",
+                "Litri": "liter",
+                "Cartoni": "kartonger",
+                "Sacchi": "säckar"
+            };
+            return map[unit] || unit || "st";
+        };
 
         window.getCategoryEmoji = function(cat) {
             const map = {
@@ -489,10 +514,9 @@
         };
 
         window.promptChangeLocation = function() { document.getElementById('location-guard-banner').style.display = 'flex'; };
-        window.toggleMenu = function() { document.getElementById('drawer').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); };
+        window.toggleMenu = function() { document.getElementById('drawer').classList.toggle('open'); document.getElementById('overlay').classList.remove('active'); };
         window.closeAll = function() { document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); document.getElementById('overlay').classList.remove('active'); document.getElementById('drawer').classList.remove('open'); };
 
-        // NAVIGAZIONE CON BLOCCO PIN RIGIDO AD OGNI CAMBIO SEZIONE
         window.navigateTo = function(sec) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
             document.getElementById(`view-${sec}`).classList.add('active');
@@ -500,7 +524,6 @@
             document.getElementById('page-title').innerText = titles[sec] || 'Magari';
             window.closeAll();
 
-            // Pulisci i campi PIN ad ogni navigazione per costringere a reinserirlo sempre
             ['magazzino', 'fornitori', 'sprechi', 'impostazioni'].forEach(s => {
                 const pInp = document.getElementById(`pin-input-${s}`);
                 if (pInp) pInp.value = '';
@@ -513,10 +536,9 @@
             const val = document.getElementById(`pin-input-${sec}`).value;
             if (String(val) === String(window.appPin)) {
                 document.getElementById(`lock-banner-${sec}`).style.display = 'none';
-            } else { alert("PIN Errato!"); }
+            } else { window.showAlert("❌ PIN Errato!"); }
         };
 
-        // AZIONI PROTETTE (RICHIEDONO SEMPRE IL PIN)
         window.requestPinAction = function(type, extraData = null) {
             if (!window.appPin) {
                 executeProtectedAction(type, extraData);
@@ -532,7 +554,7 @@
             if (String(document.getElementById('input-verify-pin').value) === String(window.appPin)) {
                 closePinModal();
                 if (window.pendingPinAction) executeProtectedAction(window.pendingPinAction.type, window.pendingPinAction.extraData);
-            } else { alert("PIN Errato!"); }
+            } else { window.showAlert("❌ PIN Errato!"); }
         };
         window.closePinModal = function() { document.getElementById('pin-modal').classList.remove('active'); document.getElementById('overlay').classList.remove('active'); window.pendingPinAction = null; };
 
@@ -540,25 +562,25 @@
             if (type === 'reset_stock_quantities') {
                 if (confirm(`Azzerare giacenze per la sede attiva (${window.activeLocation})?`)) {
                     window.inventoryData.forEach(i => { if (window.activeLocation.includes('Vasastan')) i.qty_vasastan = 0; else i.qty_ostermalm = 0; });
-                    saveDataToCloud(); refreshAllViews(); alert("Giacenze azzerate!");
+                    saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Giacenze azzerate!");
                 }
             } else if (type === 'clear_history') {
-                if (confirm("Svuotare interamente lo storico ordini?")) { window.orderHistoryData = []; saveDataToCloud(); filterHistoryItems(); alert("Storico svuotato!"); }
+                if (confirm("Svuotare interamente lo storico ordini?")) { window.orderHistoryData = []; saveDataToCloud(); filterHistoryItems(); window.showAlert("🗑️ Storico svuotato!"); }
             } else if (type === 'delete_single_history') {
                 if (confirm("Eliminare questa voce dallo storico?")) {
                     window.orderHistoryData.splice(extraData, 1);
                     saveDataToCloud(); filterHistoryItems();
                 }
             } else if (type === 'reset_suppliers') {
-                if (confirm("Ripristinare i fornitori di default?")) { window.suppliersData = [...window.defaultSuppliers]; saveDataToCloud(); refreshAllViews(); alert("Fornitori ripristinati!"); }
+                if (confirm("Ripristinare i fornitori di default?")) { window.suppliersData = [...window.defaultSuppliers]; saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Fornitori ripristinati!"); }
             } else if (type === 'reset_inventory') {
-                if (confirm("Ripristinare i prodotti di default?")) { window.inventoryData = []; saveDataToCloud(); refreshAllViews(); alert("Magazzino ripristinato!"); }
+                if (confirm("Ripristinare i prodotti di default?")) { window.inventoryData = []; saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Magazzino ripristinato!"); }
             } else if (type === 'remove_pin') {
-                window.appPin = null; saveDataToCloud(); updatePinUI(); alert("PIN rimosso.");
+                window.appPin = null; saveDataToCloud(); updatePinUI(); window.showAlert("🔓 PIN rimosso.");
             } else if (type === 'reset_all_data') {
                 if (confirm("Reset totale dati?")) {
                     window.inventoryData = []; window.suppliersData = [...window.defaultSuppliers]; window.orderHistoryData = []; window.appPin = null;
-                    saveDataToCloud(); refreshAllViews(); alert("Reset completato.");
+                    saveDataToCloud(); refreshAllViews(); window.showAlert("⚠️ Reset completato.");
                 }
             }
         };
@@ -581,16 +603,15 @@
         window.saveNewPin = function() {
             const p1 = document.getElementById('input-new-pin').value;
             const p2 = document.getElementById('input-confirm-pin').value;
-            if (!/^\d{4}$/.test(p1)) return alert("Il PIN deve essere di 4 cifre.");
-            if (p1 !== p2) return alert("I PIN non coincidono.");
-            window.appPin = String(p1); saveDataToCloud(); updatePinUI(); closeSetPinModal(); alert("PIN salvato!");
+            if (!/^\d{4}$/.test(p1)) return window.showAlert("⚠️ Il PIN deve essere di 4 cifre.");
+            if (p1 !== p2) return window.showAlert("⚠️ I PIN non coincidono.");
+            window.appPin = String(p1); saveDataToCloud(); updatePinUI(); closeSetPinModal(); window.showAlert("🔐 PIN salvato con successo!");
         };
 
         window.getQty = function(i) { return window.activeLocation && window.activeLocation.includes('Östermalm') ? (i.qty_ostermalm ?? 0) : (i.qty_vasastan ?? i.qty ?? 0); };
         window.setQty = function(i, v) { if (window.activeLocation && window.activeLocation.includes('Östermalm')) i.qty_ostermalm = v; else i.qty_vasastan = v; };
         window.getMin = function(i) { return window.activeLocation && window.activeLocation.includes('Östermalm') ? (i.minQty_ostermalm ?? 2) : (i.minQty_vasastan ?? i.minQty ?? 2); };
 
-        // FUNZIONE ORDINAMENTO GENERICO
         window.sortItemsArray = function(items, sortMode) {
             return [...items].sort((a, b) => {
                 const qtyA = getQty(a), qtyB = getQty(b);
@@ -622,11 +643,11 @@
 
         window.refreshAllViews = function() { try { filterItems(); filterStockItems(); filterOrderItems(); filterSuppliers(); filterHistoryItems(); } catch(e){} };
 
-        // GIACENZE CON FIRMA OPERATORE
+        // GIACENZE
         window.updateStock = function(id, d) { 
             const opName = document.getElementById('stock-operator-name')?.value.trim();
             if (!opName) {
-                alert("✍️ Inserisci prima la Firma / Nome dell'Operatore in cima alle scorte!");
+                window.showAlert("✍️ Inserisci prima la Firma / Nome dell'Operatore in cima alle scorte!");
                 document.getElementById('stock-operator-name')?.focus();
                 return;
             }
@@ -643,7 +664,7 @@
         window.setStock = function(id, v) { 
             const opName = document.getElementById('stock-operator-name')?.value.trim();
             if (!opName) {
-                alert("✍️ Inserisci prima la Firma / Nome dell'Operatore in cima alle scorte!");
+                window.showAlert("✍️ Inserisci prima la Firma / Nome dell'Operatore in cima alle scorte!");
                 document.getElementById('stock-operator-name')?.focus();
                 return;
             }
@@ -697,7 +718,7 @@
             });
         };
 
-        // ORDINI CON ORDINAMENTO E NESSUN CONFIRM PRELIMINARE
+        // ORDINI CON TESTI SEPARATI PER EMAIL (CHIARI E MAIUSCOLI) E WHATSAPP (*GRASSETTO*)
         window.filterOrderItems = function() {
             const q = (document.getElementById('search-order-input')?.value || '').toLowerCase();
             const cat = document.getElementById('filter-order-category')?.value || '';
@@ -741,48 +762,144 @@
 
         window.generateOrderSummary = function() {
             const op = document.getElementById('order-operator-name').value.trim();
-            if (!op) return alert("👤 Inserisci prima il nome dell'operatore in cima agli ordini.");
-            const items = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
-            if (items.length === 0) return alert("🛒 Nessun prodotto selezionato per l'ordine.");
+            if (!op) return window.showAlert("👤 Inserisci il nome dell'operatore in cima agli ordini.");
+            
+            const dateVal = document.getElementById('order-date-picker').value;
+            const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+            if (!dateVal || dateVal < tomorrowStr) {
+                return window.showAlert("🚚 La data di consegna non può essere retroattiva o per oggi. Seleziona da domani in poi.");
+            }
 
-            // RIMOSSO IL PROMPT CONFIRM PRELIMINARE: Va direttamente al riepilogo
+            const items = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
+            if (items.length === 0) return window.showAlert("🛒 Nessun prodotto selezionato per l'ordine.");
+
+            window.renderSummaryModalContent(op, dateVal);
+            document.getElementById('summary-modal').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        };
+
+        window.renderSummaryModalContent = function(op, dateVal) {
+            const items = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
             let groups = {};
             items.forEach(i => { if(!groups[i.supplierId]) groups[i.supplierId] = []; groups[i.supplierId].push(i); });
+
             const c = document.getElementById('summary-content'); c.innerHTML = '';
+            const todayStr = new Date().toLocaleDateString('it-IT');
+            const locName = window.activeLocation || 'Magari';
 
             for (let sId in groups) {
                 const sup = window.suppliersData.find(s => String(s.id) === String(sId));
                 const supplierEmail = sup?.email || '';
+                const supplierNote = window.supplierNotesMap[sId] || '';
 
-                let txt = `*BESTÄLLNING MAGARI - ${(window.activeLocation || 'SEDE').toUpperCase()}*\n👤 Beställare: ${op}\n📅 Datum: ${new Date().toLocaleDateString('it-IT')}\n\n`;
-                let html = `<div style="background:#f9f9f9; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #e2e8f0;">
-                    <div style="font-weight:bold; color:var(--primary); font-size:15px; margin-bottom:6px;">🚚 ${sup?.name || 'Fornitore'}</div>`;
-
+                // 1. TESTO PER WHATSAPP (Sintassi *grassetto*)
+                let waTxt = `*BESTÄLLNING MAGARI - ${locName.toUpperCase()}*\n`;
+                waTxt += `👤 Beställare: ${op}\n`;
+                waTxt += `🚚 Önskat leveransdatum: *${dateVal}*\n`;
+                if (supplierNote.trim()) waTxt += `💬 Anteckning: *${supplierNote.trim()}*\n`;
+                waTxt += `\nProdukter:\n`;
                 groups[sId].forEach(p => { 
-                    txt += `• ${p.name}: *${p.orderQty} ${p.unit}*\n`; 
-                    html += `<div style="font-size:13px; margin-bottom:2px;">• ${p.name}: <b>${p.orderQty} ${p.unit}</b></div>`; 
+                    const sweUnit = window.translateUnitToSwedish(p.unit);
+                    waTxt += `• ${p.name}: *${p.orderQty} ${sweUnit}*\n`; 
                 });
+                waTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
 
-                const wa = `https://wa.me/${(sup?.phone || '').replace(/[^0-9]/g,'')}?text=${encodeURIComponent(txt)}`;
-                const mailSubject = `Ordine Magari - ${window.activeLocation || ''} - ${new Date().toLocaleDateString('it-IT')}`;
-                const mailto = `mailto:${supplierEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(txt)}`;
+                // 2. TESTO PER EMAIL OUTLOOK (Iscrizioni chiare in MAIUSCOLO per massima leggibilità, senza asterischi letterali)
+                let mailTxt = `BESTÄLLNING MAGARI - ${locName.toUpperCase()}\n`;
+                mailTxt += `========================================\n`;
+                mailTxt += `👤 BESTÄLLARE: ${op}\n`;
+                mailTxt += `🚚 ÖNSKAT LEVERANSDATUM: ${dateVal}\n`;
+                if (supplierNote.trim()) mailTxt += `💬 ANTECKNING: ${supplierNote.trim().toUpperCase()}\n`;
+                mailTxt += `========================================\n\n`;
+                mailTxt += `PRODUKTER:\n`;
+                groups[sId].forEach(p => { 
+                    const sweUnit = window.translateUnitToSwedish(p.unit);
+                    mailTxt += `• ${p.name}: ${p.orderQty} ${sweUnit}\n`; 
+                });
+                mailTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
 
-                html += `<div style="display:flex; flex-direction:column; gap:6px; margin-top:10px;">
-                    <a href="${wa}" target="_blank" style="background:var(--whatsapp); color:white; padding:8px 12px; text-align:center; border-radius:6px; text-decoration:none; font-weight:bold; font-size:13px;">💬 Invia via WhatsApp</a>
-                    <a href="${mailto}" target="_blank" style="background:#0288d1; color:white; padding:8px 12px; text-align:center; border-radius:6px; text-decoration:none; font-weight:bold; font-size:13px;">✉️ Invia via Email (${supplierEmail || 'No Email'})</a>
-                </div></div>`;
+                const wa = `https://wa.me/${(sup?.phone || '').replace(/[^0-9]/g,'')}?text=${encodeURIComponent(waTxt)}`;
+                const mailSubject = `Ordine Magari - ${locName} - ${todayStr}`;
+                const mailto = `mailto:${supplierEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailTxt)}`;
 
-                c.innerHTML += html;
+                let itemsListHtml = groups[sId].map(p => {
+                    const sweUnit = window.translateUnitToSwedish(p.unit);
+                    return `<div style="font-size:16px; font-weight:600; margin-bottom:4px; color:#1e293b;">• ${p.name}: <span style="color:var(--primary); font-weight:800;">${p.orderQty} ${sweUnit}</span></div>`;
+                }).join('');
+
+                let supplierCardHtml = `
+                    <div style="background:#f9f9f9; padding:16px; border-radius:10px; margin-bottom:16px; border:1px solid #cbd5e1;">
+                        <div style="font-weight:800; color:var(--primary); font-size:18px; margin-bottom:8px;">🚚 ${sup?.name || 'Fornitore'}</div>
+                        <div style="font-size:15px; color:#333; margin-bottom:12px;"><b>Önskat leveransdatum:</b> <span style="color:var(--primary); font-weight:bold; font-size:16px;">${dateVal}</span></div>
+                        
+                        <!-- CAMPO NOTE PIÙ GRANDE -->
+                        <div style="margin-bottom:12px; background:#fff; padding:12px; border-radius:8px; border:1px solid #94a3b8;">
+                            <label style="font-weight:bold; font-size:14px; color:#334155; display:block; margin-bottom:6px;">💬 Note / Commento per ${sup?.name || 'Fornitore'} (Anteckning):</label>
+                            <textarea id="note-supplier-${sId}" class="form-control" rows="2" placeholder="Scrivi qui note specifiche..." style="font-size:15px; font-weight:bold; resize:vertical; padding:10px;" oninput="window.updateSupplierNote('${sId}', '${op}', '${dateVal}', this.value)">${supplierNote}</textarea>
+                        </div>
+
+                        <div style="margin-bottom:12px; background:#ffffff; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
+                            ${itemsListHtml}
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+                            <a id="wa-link-${sId}" href="${wa}" target="_blank" style="background:var(--whatsapp); color:white; padding:12px 16px; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">💬 Invia via WhatsApp</a>
+                            <a id="mail-link-${sId}" href="${mailto}" target="_blank" style="background:#0288d1; color:white; padding:12px 16px; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">✉️ Invia via Email (${supplierEmail || 'No Email'})</a>
+                        </div>
+                    </div>`;
+
+                c.innerHTML += supplierCardHtml;
             }
 
             c.innerHTML += `
-                <button onclick="confirmAndSaveOrderToHistory('${op}')" class="btn-save" style="width:100%; padding:12px; font-weight:bold; margin-top:8px; background:#1b5e20;">
+                <button onclick="confirmAndSaveOrderToHistory('${op}')" class="btn-save" style="width:100%; padding:14px; font-weight:bold; font-size:16px; margin-top:10px; background:#1b5e20;">
                     ✅ Conferma Ordine e Salva in Storico
                 </button>
             `;
+        };
 
-            document.getElementById('summary-modal').classList.add('active');
-            document.getElementById('overlay').classList.add('active');
+        window.updateSupplierNote = function(sId, op, dateVal, noteText) {
+            window.supplierNotesMap[sId] = noteText;
+            const sup = window.suppliersData.find(s => String(s.id) === String(sId));
+            const supplierEmail = sup?.email || '';
+            const locName = window.activeLocation || 'Magari';
+            const todayStr = new Date().toLocaleDateString('it-IT');
+
+            const items = window.inventoryData.filter(i => String(i.supplierId) === String(sId) && (i.orderQty || 0) > 0);
+
+            // AGGIORNA DINAMICAMENTE ENTRAMBI I TESTI
+            let waTxt = `*BESTÄLLNING MAGARI - ${locName.toUpperCase()}*\n`;
+            waTxt += `👤 Beställare: ${op}\n`;
+            waTxt += `🚚 Önskat leveransdatum: *${dateVal}*\n`;
+            if (noteText.trim()) waTxt += `💬 Anteckning: *${noteText.trim()}*\n`;
+            waTxt += `\nProdukter:\n`;
+            items.forEach(p => { 
+                const sweUnit = window.translateUnitToSwedish(p.unit);
+                waTxt += `• ${p.name}: *${p.orderQty} ${sweUnit}*\n`; 
+            });
+            waTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
+
+            let mailTxt = `BESTÄLLNING MAGARI - ${locName.toUpperCase()}\n`;
+            mailTxt += `========================================\n`;
+            mailTxt += `👤 BESTÄLLARE: ${op}\n`;
+            mailTxt += `🚚 ÖNSKAT LEVERANSDATUM: ${dateVal}\n`;
+            if (noteText.trim()) mailTxt += `💬 ANTECKNING: ${noteText.trim().toUpperCase()}\n`;
+            mailTxt += `========================================\n\n`;
+            mailTxt += `PRODUKTER:\n`;
+            items.forEach(p => { 
+                const sweUnit = window.translateUnitToSwedish(p.unit);
+                mailTxt += `• ${p.name}: ${p.orderQty} ${sweUnit}\n`; 
+            });
+            mailTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
+
+            const wa = `https://wa.me/${(sup?.phone || '').replace(/[^0-9]/g,'')}?text=${encodeURIComponent(waTxt)}`;
+            const mailSubject = `Ordine Magari - ${locName} - ${todayStr}`;
+            const mailto = `mailto:${supplierEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailTxt)}`;
+
+            const waLinkEl = document.getElementById(`wa-link-${sId}`);
+            const mailLinkEl = document.getElementById(`mail-link-${sId}`);
+            if (waLinkEl) waLinkEl.href = wa;
+            if (mailLinkEl) mailLinkEl.href = mailto;
         };
 
         window.confirmAndSaveOrderToHistory = function(operator) {
@@ -801,20 +918,110 @@
                     destination: window.activeLocation || 'Sede Non Specifica',
                     operatorName: operator,
                     supplierName: sup?.name || 'Fornitore',
+                    note: window.supplierNotesMap[sId] || '',
                     items: groups[sId].map(i => ({ name: i.name, qty: i.orderQty, unit: i.unit }))
                 });
             }
 
             window.inventoryData.forEach(i => i.orderQty = 0);
+            window.supplierNotesMap = {};
             saveDataToCloud();
             refreshAllViews();
             closeSummaryModal();
-            alert("🎉 Ordine salvato nello storico e carrello svuotato con successo!");
+            window.showAlert("🎉 Ordine salvato nello storico e carrello svuotato con successo!");
         };
 
         window.closeSummaryModal = function() { document.getElementById('summary-modal').classList.remove('active'); document.getElementById('overlay').classList.remove('active'); };
 
-        // STORICO CON CANCELLAZIONE PROTETTA DA PIN
+        // REPORT CONSUMI
+        window.toggleReportPeriodInputs = function() {
+            const period = document.getElementById('report-period-type')?.value;
+            const monthGroup = document.getElementById('report-month-select-group');
+            if (monthGroup) monthGroup.style.display = (period === 'month') ? 'block' : 'none';
+        };
+
+        window.generateRealReport = function() {
+            const periodType = document.getElementById('report-period-type').value;
+            const monthVal = document.getElementById('report-month-picker').value;
+            const container = document.getElementById('report-results-container');
+            const titleEl = document.getElementById('report-title-display');
+            const alcTbody = document.querySelector('#table-alcohol-report tbody');
+            const foodTbody = document.querySelector('#table-food-report tbody');
+
+            let reportTitle = "Report Consumi";
+            let aggregatedMap = {}; 
+
+            if (periodType === 'stock') {
+                reportTitle = `Giacenze Attuali - ${window.activeLocation || 'Tutte le Sedi'}`;
+                window.inventoryData.forEach(item => {
+                    const q = getQty(item);
+                    if (q > 0) {
+                        aggregatedMap[item.name] = {
+                            qty: q,
+                            price: item.price || 0,
+                            category: item.category,
+                            unit: item.unit
+                        };
+                    }
+                });
+            } else {
+                if (periodType === 'month') {
+                    if (!monthVal) return window.showAlert("⚠️ Seleziona un mese per il report!");
+                    reportTitle = `Report Consumi Ordini - Mese ${monthVal}`;
+                } else {
+                    reportTitle = "Report Consumi Totale Ordini";
+                }
+
+                window.orderHistoryData.forEach(entry => {
+                    if (window.activeLocation && entry.destination && !entry.destination.includes(window.activeLocation.split(' ')[0])) {
+                        return;
+                    }
+                    if (periodType === 'month' && monthVal) {
+                        const parts = entry.timestamp.split('/');
+                        if (parts.length >= 3) {
+                            const month = parts[1].padStart(2, '0');
+                            const year = parts[2].substring(0, 4);
+                            if (`${year}-${month}` !== monthVal) return;
+                        }
+                    }
+
+                    if (Array.isArray(entry.items)) {
+                        entry.items.forEach(it => {
+                            const invItem = window.inventoryData.find(x => x.name === it.name);
+                            const cat = invItem ? invItem.category : 'Altro';
+                            const price = invItem ? (invItem.price || 0) : 0;
+                            if (!aggregatedMap[it.name]) {
+                                aggregatedMap[it.name] = { qty: 0, price, category: cat, unit: it.unit };
+                            }
+                            aggregatedMap[it.name].qty += parseFloat(it.qty) || 0;
+                        });
+                    }
+                });
+            }
+
+            titleEl.innerText = reportTitle;
+            alcTbody.innerHTML = '';
+            foodTbody.innerHTML = '';
+
+            let alcCount = 0, foodCount = 0;
+
+            for (let name in aggregatedMap) {
+                const data = aggregatedMap[name];
+                const cost = (data.qty * data.price).toFixed(2);
+                const isAlc = ['Alcolici', 'Bevande'].includes(data.category);
+                const tr = `<tr><td>${name}</td><td>${data.qty} ${data.unit}</td><td>${cost} SEK</td></tr>`;
+
+                if (isAlc) { alcTbody.innerHTML += tr; alcCount++; } 
+                else { foodTbody.innerHTML += tr; foodCount++; }
+            }
+
+            if (alcCount === 0) alcTbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">Nessun dato registrato</td></tr>';
+            if (foodCount === 0) foodTbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">Nessun dato registrato</td></tr>';
+
+            container.style.display = 'block';
+        };
+
+        // STORICO
         window.filterHistoryItems = function() {
             const c = document.getElementById('history-list'); c.innerHTML = '';
             const filterLoc = document.getElementById('filter-history-location')?.value || 'active';
@@ -843,6 +1050,7 @@
                             <span>📍 ${h.destination}</span>
                         </div>
                         <div style="font-weight:bold; font-size:14px; margin-bottom:4px;">🚚 ${h.supplierName} <span style="font-size:12px; font-weight:normal; color:#666;">(👤 ${h.operatorName})</span></div>
+                        ${h.note ? `<div style="font-size:12px; color:#1b5e20; margin-top:4px;"><b>💬 Nota:</b> ${h.note}</div>` : ''}
                         ${itemsHtml ? `<div style="font-size:12px; color:#333; margin-top:6px; background:#f8fafc; padding:6px; border-radius:4px;">${itemsHtml}</div>` : ''}
                         <div style="margin-top:8px; text-align:right;">
                             <button class="btn-action-del" onclick="requestPinAction('delete_single_history', ${idx})">🔒 🗑️ Elimina Voce</button>
@@ -851,7 +1059,7 @@
             });
         };
 
-        // GESTIONE MAGAZZINO E FORNITORI
+        // MAGAZZINO
         window.openAddModal = function(id = null) {
             populateAllSupplierFilters();
             document.getElementById('edit-item-id').value = '';
@@ -882,7 +1090,7 @@
         window.saveInventoryItem = function() {
             const idVal = document.getElementById('edit-item-id').value;
             const name = document.getElementById('new-name').value.trim();
-            if (!name) return alert("Inserisci il nome del prodotto.");
+            if (!name) return window.showAlert("⚠️ Inserisci il nome del prodotto.");
             const cat = document.getElementById('new-category-select').value;
             const supId = parseInt(document.getElementById('new-supplier-select').value);
             const minV = parseInt(document.getElementById('new-min-vasastan').value) || 2;
@@ -940,7 +1148,7 @@
         window.saveSupplier = function() {
             const idVal = document.getElementById('edit-supplier-id').value;
             const name = document.getElementById('supp-name').value.trim();
-            if (!name) return alert("Inserisci il nome del fornitore.");
+            if (!name) return window.showAlert("⚠️ Inserisci il nome del fornitore.");
             const color = document.getElementById('supp-color-input').value;
             const phone = document.getElementById('supp-phone').value.trim();
             const email = document.getElementById('supp-email').value.trim();
@@ -967,7 +1175,16 @@
             const cat = document.getElementById('filter-inventory-category')?.value || '';
             const sup = document.getElementById('filter-inventory-supplier')?.value || '';
             const c = document.getElementById('inventory-list'); c.innerHTML = '';
-            window.inventoryData.filter(i => i.name.toLowerCase().includes(q) && (!cat || i.category === cat) && (!sup || String(i.supplierId) === String(sup))).forEach(item => {
+
+            let items = window.inventoryData.filter(i => 
+                i.name.toLowerCase().includes(q) && 
+                (!cat || i.category === cat) && 
+                (!sup || String(i.supplierId) === String(sup))
+            );
+
+            items.sort((a, b) => a.name.localeCompare(b.name));
+
+            items.forEach(item => {
                 const supObj = window.suppliersData.find(s => String(s.id) === String(item.supplierId));
                 const catEmoji = window.getCategoryEmoji(item.category);
                 c.innerHTML += `
@@ -991,7 +1208,11 @@
         window.filterSuppliers = function() {
             const q = (document.getElementById('search-supplier-input')?.value || '').toLowerCase();
             const c = document.getElementById('suppliers-list'); c.innerHTML = '';
-            window.suppliersData.filter(s => s.name.toLowerCase().includes(q)).forEach(s => {
+            
+            let suppliers = window.suppliersData.filter(s => s.name.toLowerCase().includes(q));
+            suppliers.sort((a, b) => a.name.localeCompare(b.name));
+
+            suppliers.forEach(s => {
                 c.innerHTML += `
                     <div class="card-item">
                         <div class="item-name-box" style="border-left-color:${s.color};">
@@ -1023,11 +1244,17 @@
             rows.push(["TOTAL INVENTORY VALUE", "", "", "", "", "", tot]);
             const ws = XLSX.utils.aoa_to_sheet(rows), wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-            XLSX.writeFile(wb, `Inventory_Magari_${window.activeLocation.split(' ')[0]}.xlsx`);
+            XLSX.writeFile(wb, `Inventory_Magari_${(window.activeLocation || '').split(' ')[0]}.xlsx`);
             closeExportExcelModal();
         };
 
-        document.getElementById('order-date-picker').valueAsDate = new Date();
+        const tomorrow = new Date(Date.now() + 86400000);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        const datePicker = document.getElementById('order-date-picker');
+        if (datePicker) {
+            datePicker.min = tomorrowStr;
+            datePicker.value = tomorrowStr;
+        }
     </script>
 </body>
 </html>
