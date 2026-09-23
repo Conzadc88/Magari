@@ -1,11 +1,13 @@
 <!--
 ====================================================================
 [MAGARI APP - CHANGELOG HISTORICAL REGISTRY]
-- v3.4.1: Unificazione Anagrafica Base Pizzeria + Prodotti Fatture Reali (Master Inventory). Aggiornato numero di versione in tutta la GUI.
-- v3.4.0: Fix critico esecuzione azioni protette da PIN (memorizzazione pendente prima della chiusura modale).
-- v3.3.9: Estrapolazione e integrazione in anagrafica di tutti i nuovi prodotti e prezzi SEK da fatture reali (Stellan Kramer, Daniele FG AB, Jansson Fisk AB, Divinoil).
-- v3.3.8: Introduzione Ricette & Food Cost, Alias Cassa e Registro Vendite con retrodatazione.
-- v3.3.0: Gestione multi-sede (Vasastan / Östermalm) con giacenze e minimi separati.
+- v3.5.2: Aggiornamento Master Inventory Daniele FG AB (aggiornamento prezzi all'ultimo listino da fattura e aggiunta di 5 nuovi prodotti privi di duplicati).
+- v3.5.1: Aggiornamento Master Inventory Don Bibbo AB (aggiornamento listino prezzi e aggiunta di 21 nuovi articoli privi di duplicati).
+- v3.5.0: Introduzione Modulo Ricette & Calcolo Food Cost con calcolo automatico panetto da 285g (2.51 SEK), selezione decimali da magazzino e analisi marginalità.
+- v3.4.1: Unificazione Anagrafica Base Pizzeria + Prodotti Fatture Reali (Master Inventory).
+- v3.4.0: Fix critico esecuzione azioni protette da PIN.
+- v3.3.9: Estrapolazione prodotti da fatture reali (Stellan Kramer, Daniele FG AB, Jansson Fisk AB, Divinoil).
+- v3.3.0: Gestione multi-sede (Vasastan / Östermalm).
 ====================================================================
 -->
 <!DOCTYPE html>
@@ -20,7 +22,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Magari">
-    <title>Magari v3.4.1 - Master Inventory & Desktop</title>
+    <title>Magari v3.5.2 - Ricette & Food Cost</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -100,6 +102,16 @@
         .btn-action-edit { background: #e3f2fd; color: #0d47a1; border: 1px solid #bbdefb; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .btn-action-del { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
+        .recipe-card { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .recipe-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+        .recipe-title { font-size: 18px; font-weight: 800; color: var(--primary); }
+        .badge-panetto { font-size: 11px; font-weight: bold; background: #e8f5e9; color: #2e7d32; padding: 3px 8px; border-radius: 6px; border: 1px solid #c8e6c9; }
+        .foodcost-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
+        .fc-stat-box { display: flex; flex-direction: column; }
+        .fc-stat-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; }
+        .fc-stat-val { font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 2px; }
+        .ingredient-item-row { display: flex; justify-content: space-between; font-size: 12px; color: #334155; padding: 4px 0; border-bottom: 1px dashed #f1f5f9; }
+
         .drawer { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background-color: white; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease; z-index: 200; padding: 20px; }
         .drawer.open { left: 0; }
         .drawer-header { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); background-color: var(--primary); border-radius: 8px; padding: 16px 12px; }
@@ -139,7 +151,7 @@
             .app-container { max-width: 1200px; box-shadow: 0 0 30px rgba(0,0,0,0.08); }
             .sticky-checkout-container { max-width: 1200px; }
             .content-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
-            .history-card, .empty-placeholder, .settings-card { grid-column: 1 / -1; }
+            .history-card, .empty-placeholder, .settings-card, .recipe-card { grid-column: span 1; }
             .modal { max-width: 520px; }
         }
     </style>
@@ -169,11 +181,12 @@
         <div class="drawer" id="drawer">
             <div class="drawer-header">
                 <div class="brand-title" style="font-size: 26px;">MAGARI</div>
-                <div class="brand-subtitle" style="font-size: 9px; letter-spacing: 2px;">v3.4.1 Master Inventory</div>
+                <div class="brand-subtitle" style="font-size: 9px; letter-spacing: 2px;">v3.5.2 Ricette & Food Cost</div>
             </div>
             <ul class="drawer-menu">
                 <li onclick="navigateTo('ordini')">🛒 Ordini</li>
                 <li onclick="navigateTo('scorte')">📦 Scorte (Giacenze)</li>
+                <li onclick="navigateTo('ricette')">🍕 Ricette & Food Cost <span id="lock-icon-ricette">🔓</span></li>
                 <li onclick="navigateTo('storico')">📜 Storico Ordini</li>
                 <li onclick="navigateTo('magazzino')">🛠️ Magazzino <span id="lock-icon-magazzino">🔓</span></li>
                 <li onclick="navigateTo('fornitori')">🚚 Fornitori <span id="lock-icon-fornitori">🔓</span></li>
@@ -186,7 +199,7 @@
             <button class="menu-btn" onclick="toggleMenu()">☰</button>
             <div class="header-brand-text">
                 <div class="brand-title">MAGARI</div>
-                <div class="brand-subtitle">v3.4.1 Master Inventory</div>
+                <div class="brand-subtitle">v3.5.2 Ricette & Food Cost</div>
             </div>
             <div class="page-badge" id="page-title">Ordini</div>
         </div>
@@ -271,7 +284,25 @@
             <div class="content-list" id="stock-list"></div>
         </div>
 
-        <!-- 3. STORICO -->
+        <!-- 3. RICETTE & FOOD COST -->
+        <div id="view-ricette" class="view-section">
+            <div class="page-lock-banner" id="lock-banner-ricette" style="display: none;">
+                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Ricette Bloccate</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-ricette" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('ricette')">Conferma</button></div></div>
+            </div>
+            <div class="top-bar-container">
+                <div style="background:#e8f5e9; border:1px solid #a5d6a7; border-radius:8px; padding:8px 12px; font-size:12px; color:#1b5e20; display:flex; justify-content:space-between; align-items:center;">
+                    <span>🍞 <b>Costo Panetto (285g):</b> Impasto 75% H2O</span>
+                    <span id="display-panetto-cost-badge" style="font-weight:bold; font-size:13px; background:#2e7d32; color:white; padding:2px 8px; border-radius:4px;">2.51 SEK</span>
+                </div>
+                <div class="search-row">
+                    <input type="text" id="search-recipe-input" class="search-input" placeholder="Cerca ricetta o pizza..." oninput="filterRecipes()">
+                    <button class="add-btn" onclick="openRecipeModal()">+ Nuova Ricetta</button>
+                </div>
+            </div>
+            <div class="content-list" id="recipe-list"></div>
+        </div>
+
+        <!-- 4. STORICO -->
         <div id="view-storico" class="view-section">
             <div class="top-bar-container">
                 <button class="reset-btn" onclick="requestPinAction('clear_history')">🔒 🗑️ Svuota Tutto lo Storico Ordini</button>
@@ -284,7 +315,7 @@
             <div class="content-list" id="history-list"></div>
         </div>
 
-        <!-- 4. MAGAZZINO -->
+        <!-- 5. MAGAZZINO -->
         <div id="view-magazzino" class="view-section">
             <div class="page-lock-banner" id="lock-banner-magazzino" style="display: none;">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Magazzino Bloccato</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-magazzino" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('magazzino')">Conferma</button></div></div>
@@ -311,7 +342,7 @@
             <div class="content-list" id="inventory-list"></div>
         </div>
 
-        <!-- 5. FORNITORI -->
+        <!-- 6. FORNITORI -->
         <div id="view-fornitori" class="view-section">
             <div class="page-lock-banner" id="lock-banner-fornitori" style="display: none;">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Fornitori Bloccati</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-fornitori" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('fornitori')">Conferma</button></div></div>
@@ -320,7 +351,7 @@
             <div class="content-list" id="suppliers-list"></div>
         </div>
 
-        <!-- 6. REPORT CONSUMI -->
+        <!-- 7. REPORT CONSUMI -->
         <div id="view-sprechi" class="view-section">
             <div class="page-lock-banner" id="lock-banner-sprechi" style="display: none;">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Report Bloccati</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-sprechi" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('sprechi')">Conferma</button></div></div>
@@ -339,7 +370,7 @@
             </div>
         </div>
 
-        <!-- 7. IMPOSTAZIONI -->
+        <!-- 8. IMPOSTAZIONI -->
         <div id="view-impostazioni" class="view-section">
             <div class="page-lock-banner" id="lock-banner-impostazioni" style="display: none;">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Impostazioni Bloccate</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-impostazioni" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('impostazioni')">Conferma</button></div></div>
@@ -357,6 +388,30 @@
     </div>
 
     <!-- MODALI -->
+    <div class="modal" id="recipe-modal" style="max-width:540px;">
+        <div class="modal-title" id="recipe-modal-title">🍕 Scheda Ricetta & Food Cost</div>
+        <input type="hidden" id="edit-recipe-id">
+        <div class="form-group"><label>Nome Piatto / Pizza</label><input type="text" id="recipe-name-input" class="form-control" placeholder="es. Margherita, Diavola, Calzone..."></div>
+        <div style="display:flex; gap:8px;">
+            <div class="form-group" style="flex:1;"><label>Prezzo Vendita (SEK)</label><input type="number" step="0.5" id="recipe-price-input" class="form-control" value="125" oninput="updateModalFoodCostPreview()"></div>
+            <div class="form-group" style="flex:1;">
+                <label>Includi Panetto (285g)?</label>
+                <select id="recipe-has-panetto-select" class="form-control" onchange="updateModalFoodCostPreview()">
+                    <option value="true">🍞 Sì (+ Impasto 2.51 SEK)</option>
+                    <option value="false">❌ No (Insalate/Dolci/Special)</option>
+                </select>
+            </div>
+        </div>
+        <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
+        <label style="font-weight:bold; font-size:12px; color:var(--primary); display:block; margin-bottom:6px;">🧂 Ingredienti da Magazzino (in Decimali Unità):</label>
+        <div id="recipe-ingredients-container" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; margin-bottom:10px;"></div>
+        <button type="button" class="btn-cancel" style="width:100%; font-size:12px; font-weight:bold; background:#e3f2fd; color:#0d47a1;" onclick="addRecipeIngredientRow()">+ Aggiungi Ingrediente</button>
+        <div style="background:#f1f5f9; padding:10px; border-radius:8px; margin-top:12px; font-size:13px; font-weight:bold;" id="recipe-modal-cost-preview">
+            Costo Calcolato: 0.00 SEK | Margine: 0.00 SEK
+        </div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="closeRecipeModal()">Annulla</button><button class="btn-save" onclick="saveRecipe()">Salva Ricetta</button></div>
+    </div>
+
     <div class="modal" id="export-excel-modal">
         <div class="modal-title">📊 Export Inventory (English Excel)</div>
         <div class="form-group"><label>Tipologia:</label><select id="export-type-select" class="form-control"><option value="food">🍕 Food & Supplies</option><option value="alcohol">🍷 Alcohol & Beverages</option><option value="all">📦 Full Inventory</option></select></div>
@@ -453,7 +508,6 @@
         ];
 
         window.defaultInventory = [
-            // --- PRODOTTI BASE PIZZERIA & CONSUMABILI ---
             {"id":1800000000,"name":"Tiramisù CLASSIC portionsburk i glas","category":"Altro","supplierId":1700000001,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":39.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000001,"name":"Taralli Traditionell Hink 2,5 kg","category":"Farine & Secco","supplierId":1700000002,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":250.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000002,"name":"Dabramo Classico Bryggkaffe, 3 kg/fp","category":"Altro","supplierId":1700000003,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":600.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
@@ -475,54 +529,81 @@
             {"id":1800000018,"name":"SERV POCKET 40 SV 1/8AIR 7","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":669.75,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000019,"name":"SERV POCK 40 VIT 1/8 AIR 7","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":466.65,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000020,"name":"TVÅL OPARFYMERAD TORK S4","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":733.91,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000021,"name":"GRAN RETTINATO formaggio 5kg","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":138.24,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000022,"name":"Prosciutto MECHEL ca 7kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":129.12,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000023,"name":"Burrata 8x100g Nonno Nanni","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":15.51,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000024,"name":"Mozzarella BUFFEL 20x125g","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":17.74,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000025,"name":"Mjöl Pizza Oro d'Irpinia 25kg [tipo 0]","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Sacchi","price":379.06,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+
+            // --- DON BIBBO AB ---
+            {"id":1800000021,"name":"GRAN RETTINATO formaggio 5kg","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":169.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000022,"name":"Prosciutto MECHel ca 7kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":155.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000023,"name":"Burrata 8x100g Nonno Nanni","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":17.95,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000024,"name":"Mozzarella BUFFEL 20x125g","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":20.95,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000025,"name":"Mjöl Pizza Reginella Tipo 0 25kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Sacchi","price":392.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000078,"name":"Mjöl Pizza Reginella Tipo 1 25kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Sacchi","price":369.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000026,"name":"Pomodoro San Marzano DOP 6x2,5kg","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":389.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000027,"name":"Pomodoro Polpa 3x5kg Solania","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":289.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000028,"name":"Frityrolja 10 Liter","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":229.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000029,"name":"Prosciutto di Parma DOP ca 7kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":219.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000030,"name":"Salame Napoli Dolce ca 1kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":119.2,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000031,"name":"Spianata Piccante Calabra ca 1,5kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":129.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000030,"name":"Salame Napoli Dolce ca 1kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":149.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000031,"name":"Spianata Piccante Calabra ca 2.5kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":159.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000032,"name":"Fior di Latte MONTI Fryst 9,36kg","category":"Surgelati","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":1004.26,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000033,"name":"Salame Piccante Calabrese ca 1kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":119.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000034,"name":"Pancetta Arrotolata ca 2kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":139.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000035,"name":"Porchetta di Ariccia ca 3kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":159.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000036,"name":"Ricotta 1,5kg IT","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":75.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000037,"name":"Mascarpone 500g","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":39.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000038,"name":"Mjölk Laktosfri RÖD 3% 1L","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":18.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000039,"name":"Provola Affumicata ca 2kg","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":142.45,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000036,"name":"Ricotta 1,5kg IT","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":78.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000037,"name":"Mascarpone 500g","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":59.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000038,"name":"Mjölk Laktosfri RÖD 3% 1L","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":23.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000039,"name":"Provola Affumicata ca 2kg","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":99.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000040,"name":"Grädde RED LABEL 35% 1L","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":39.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000041,"name":"Nduja i burk 200g","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":49.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000042,"name":"Pesto Genovese 500g","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":69.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000043,"name":"Nötfärs FR 10% 6x2kg","category":"Surgelati","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":113.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000044,"name":"Karl Johan Tärnad 1kg Italy","category":"Surgelati","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":133.06,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000045,"name":"Kronärtskockor i olja 3kg","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":159.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000046,"name":"Salsiccia FÄRSK natur Peveri","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":64.33,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000046,"name":"Salsiccia FÄRSK natur Peveri","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":83.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000047,"name":"Smör Italy 4x1000g Parmareggio","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":380.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000048,"name":"Svampar Blanda Fryst 1kg","category":"Surgelati","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":81.3,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000049,"name":"Jäst Färsk 500g","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":19.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000049,"name":"Jäst Färsk 40x50g","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":159.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000050,"name":"Aromatica Krydda 1kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":79.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000051,"name":"Oregano Torkad 1kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":99.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000052,"name":"Salt Fint 1kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":12.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000053,"name":"Chiliflakes 500g","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":49.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000100,"name":"Prosciutto Cotto GRAN BLU 8kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":79.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000101,"name":"Matolja 10L Raps","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":227.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000102,"name":"SockerStrö 2kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":38.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000103,"name":"Olivolja Extra Virgin 5L Lovascio","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":495.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000104,"name":"Pommes Frites AVIKO 9.5mm 4x2.5kg","category":"Surgelati","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":299.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000105,"name":"Salt Fint 25kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Sacchi","price":188.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000106,"name":"Nduja Salame Casa M. ca 400g","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":163.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000107,"name":"Mjöl Glutenfri CAPUTO 1kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":80.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000108,"name":"Tomat Pelati REGINA San Marzano 3kg","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":66.25,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000109,"name":"Linguine De Cecco 12x1kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":479.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000110,"name":"Friarielli Napoletani 1kg Alimentis","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":88.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000111,"name":"Oliver RIVIERA U/K 5kg Don Bibbo","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":335.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000112,"name":"Kapris i Vinäger 720g","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":56.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000113,"name":"Gorgonzola DOP ca 1,5kg","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":139.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000114,"name":"Limonata San Pellegrino Burk 24x33cl","category":"Bevande","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":329.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000115,"name":"Aranciata Rossa San Pellegrino Burk 24x33cl","category":"Bevande","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":329.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000116,"name":"Mineralvatten San Pellegrino 24x50cl Glas","category":"Bevande","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":342.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000117,"name":"Guanciale Peveri ca 1.8kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":149.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000118,"name":"Mjöl DURUM Rimacinata 5kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":89.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000119,"name":"Kronhjärta Vatten i Bit 3kg Mazza","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":99.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000120,"name":"Birra Moretti ZERO Alkoholfri 24x33cl","category":"Bevande","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":342.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+
+            // --- DANIELE FG AB (Aggiornato v3.5.2) ---
             {"id":1800000059,"name":"Potatis","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":12.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000060,"name":"Lök röd","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":14.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000061,"name":"Vitlök","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":49.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000065,"name":"Schalottenlök","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":29.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000066,"name":"Körsbärstomater ask x500g","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":24.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000069,"name":"Oliver Gröna Nocellara 3kg","category":"Conserve & Pomodoro","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":137.5,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000070,"name":"Morötter","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":12.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000070,"name":"Morot tvättad","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":17.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000071,"name":"Chili Röd Färsk","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":89.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000072,"name":"Linser gröna 900g","category":"Farine & Secco","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":35.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000073,"name":"Tomat","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":49.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000073,"name":"Tomat","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":49.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000074,"name":"Lök gul","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":9.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            
+            // --- JANSSON FISK & ÖSTKUSTENS SMAK ---
             {"id":1800000075,"name":"Vannameiräka skalad 16-20, fryst","category":"Surgelati","supplierId":1700000007,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":125.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000076,"name":"Orecchiette färsk","category":"Farine & Secco","supplierId":1700000008,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Sacchi","price":45.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1800000077,"name":"Cavatelli färsk lebba 500 gr","category":"Farine & Secco","supplierId":1700000008,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":45.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1800000078,"name":"Mjöl Pizza Oro d'Irpinia 25kg [tipo 1]","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Sacchi","price":379.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
 
             // --- VINI & ALCOLICI ---
             {"id":1900000001,"name":"Spumante Cuvée Brut Vandori","category":"Alcolici","supplierId":1700000009,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":73.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
@@ -536,7 +617,7 @@
             {"id":1900000003,"name":"Berlucchi '61 Extra Brut","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":220.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1900000006,"name":"Champagne 1er cru","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":299.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1900000011,"name":"Cabernet Sauvignon Ca Vegar","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":88.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
-            {"id":1900000012,"name":"Primitivo Nero Marone","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":92.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000012,"name":"Primitivo Nero Marrone","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":92.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1900000013,"name":"Montepulciano d'Abruzzo Jasci","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":97.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1900000014,"name":"Nebbiolo d'Alba","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":108.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
             {"id":1900000015,"name":"Aglianico Claudio Quarta","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":105.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
@@ -580,7 +661,7 @@
             { id: 2000000002, name: "Campania Aglianico Virata Casino Nitti", category: "Alcolici", supplierId: 1700000010, minQty_vasastan: 6, minQty_ostermalm: 6, orderQty: 0, unit: "Bottiglie", price: 105.00, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000003, name: "Champinjoner (Svamp)", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 41.90, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000004, name: "Napolitana Salladsmix 400g", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 48.50, qty_vasastan: 0, qty_ostermalm: 0 },
-            { id: 2000000005, name: "Tomat Kvist", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 5, minQty_ostermalm: 5, orderQty: 0, unit: "Kg", price: 35.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000005, name: "Tomat Kvist", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 5, minQty_ostermalm: 5, orderQty: 0, unit: "Kg", price: 39.90, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000006, name: "Persilja Blad", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 1, minQty_ostermalm: 1, orderQty: 0, unit: "Kg", price: 69.90, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000007, name: "Citron", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 24.90, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000008, name: "Apelsin Press", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 23.90, qty_vasastan: 0, qty_ostermalm: 0 },
@@ -589,9 +670,9 @@
             { id: 2000000011, name: "Coca-Cola 33cl (Box x30)", category: "Bevande", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Cartoni", price: 199.00, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000012, name: "Coca-Cola Zero 33cl (Box x30)", category: "Bevande", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Cartoni", price: 199.00, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000013, name: "Paprika Mix", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 39.90, qty_vasastan: 0, qty_ostermalm: 0 },
-            { id: 2000000014, name: "Zucchini", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 26.90, qty_vasastan: 0, qty_ostermalm: 0 },
-            { id: 2000000015, name: "Aubergine", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 42.00, qty_vasastan: 0, qty_ostermalm: 0 },
-            { id: 2000000016, name: "Gurka Ofilmad", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 5, minQty_ostermalm: 5, orderQty: 0, unit: "Kg", price: 32.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000014, name: "Zucchini", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 37.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000015, name: "Aubergine", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 52.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000016, name: "Gurka Ofilmad", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 5, minQty_ostermalm: 5, orderQty: 0, unit: "Kg", price: 33.90, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000017, name: "Avokado Fryst Tärnad 1kg", category: "Surgelati", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Kg", price: 89.00, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000018, name: "Tonfisk i Olja 1.7kg", category: "Conserve & Pomodoro", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 132.90, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000019, name: "Rucola 500g", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Unità", price: 51.90, qty_vasastan: 0, qty_ostermalm: 0 },
@@ -600,12 +681,32 @@
             { id: 2000000022, name: "Äggvita 1L", category: "Altro", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 49.90, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000023, name: "Apelsinjuice 1.75L", category: "Bevande", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 49.00, qty_vasastan: 0, qty_ostermalm: 0 },
             { id: 2000000024, name: "Gravad Lax (Fryst)", category: "Surgelati", supplierId: 1700000007, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Kg", price: 269.00, qty_vasastan: 0, qty_ostermalm: 0 },
-            { id: 2000000025, name: "Tagliata di Tartufo Nero Estivo 310g", category: "Conserve & Pomodoro", supplierId: 1700000002, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 422.00, qty_vasastan: 0, qty_ostermalm: 0 }
+            { id: 2000000025, name: "Tagliata di Tartufo Nero Estivo 310g", category: "Conserve & Pomodoro", supplierId: 1700000002, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 422.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            
+            // --- NUOVI PRODOTTI DANIELE FG AB DA FATTURE SETTEMBRE ---
+            { id: 2000000026, name: "Tomat Cocktail Semi i olja", category: "Conserve & Pomodoro", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 189.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000027, name: "Majs i burk", category: "Conserve & Pomodoro", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 71.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000028, name: "Blekselleri", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 23.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000029, name: "Citronjuice 1L", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 39.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000030, name: "Päron Conference", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Kg", price: 34.00, qty_vasastan: 0, qty_ostermalm: 0 }
+        ];
+
+        window.defaultRecipes = [
+            {
+                id: 3000000001,
+                name: "Pizza Margherita",
+                priceSEK: 125.00,
+                hasPanetto: true,
+                ingredients: [
+                    { itemId: 1800000027, qtyDecimal: 0.007 }, // Solania ~100g
+                    { itemId: 1800000032, qtyDecimal: 0.010 }  // Fior di Latte MONTI ~100g
+                ]
+            }
         ];
 
         window.suppliersData = [...window.defaultSuppliers];
         window.inventoryData = [...window.defaultInventory];
-        window.recipesData = [];
+        window.recipesData = [...window.defaultRecipes];
         window.orderHistoryData = [];
 
         onSnapshot(appDocRef, (snapshot) => {
@@ -651,6 +752,22 @@
             }
         };
 
+        // CALCOLO DINAMICO COSTO PANETTO (285g: 111.55g Farina 0, 47.81g Farina 1, 119.51g H2O, 5.34g Sale, 0.8g Lievito)
+        window.calculatePanettoCost = function() {
+            const farina0 = window.inventoryData.find(i => String(i.id) === "1800000025") || window.inventoryData.find(i => i.name.toLowerCase().includes("tipo 0"));
+            const farina1 = window.inventoryData.find(i => String(i.id) === "1800000078") || window.inventoryData.find(i => i.name.toLowerCase().includes("tipo 1"));
+            const sale = window.inventoryData.find(i => String(i.id) === "1800000052") || window.inventoryData.find(i => i.name.toLowerCase().includes("salt"));
+            const lievito = window.inventoryData.find(i => String(i.id) === "1800000049") || window.inventoryData.find(i => i.name.toLowerCase().includes("jäst"));
+
+            const pFarina0 = farina0 ? (farina0.price / 25) * 0.11155 : 1.749;
+            const pFarina1 = farina1 ? (farina1.price / 25) * 0.04781 : 0.705;
+            const pSale = sale ? (sale.price / 1.0) * 0.00534 : 0.064;
+            const pLievito = lievito ? (lievito.price / 2.0) * 0.00080 : 0.063;
+
+            const tot = pFarina0 + pFarina1 + pSale + pLievito;
+            return parseFloat(tot.toFixed(2));
+        };
+
         window.translateUnitToSwedish = function(unit) {
             const map = {
                 "Bottiglie": "flaskor", "Unità": "st", "Kg": "kg",
@@ -683,11 +800,11 @@
         window.navigateTo = function(sec) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
             document.getElementById(`view-${sec}`).classList.add('active');
-            const titles = { 'ordini': 'Ordini', 'scorte': 'Scorte', 'storico': 'Storico', 'magazzino': 'Magazzino', 'fornitori': 'Fornitori', 'sprechi': 'Report Consumi', 'impostazioni': 'Impostazioni' };
+            const titles = { 'ordini': 'Ordini', 'scorte': 'Scorte', 'ricette': 'Ricette & Food Cost', 'storico': 'Storico', 'magazzino': 'Magazzino', 'fornitori': 'Fornitori', 'sprechi': 'Report Consumi', 'impostazioni': 'Impostazioni' };
             document.getElementById('page-title').innerText = titles[sec] || 'Magari';
             window.closeAll();
 
-            ['magazzino', 'fornitori', 'sprechi', 'impostazioni'].forEach(s => {
+            ['magazzino', 'fornitori', 'ricette', 'sprechi', 'impostazioni'].forEach(s => {
                 const pInp = document.getElementById(`pin-input-${s}`);
                 if (pInp) pInp.value = '';
                 const banner = document.getElementById(`lock-banner-${s}`);
@@ -755,12 +872,12 @@
             } else if (type === 'reset_suppliers') {
                 if (confirm("Ripristinare i fornitori di default?")) { window.suppliersData = [...window.defaultSuppliers]; saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Fornitori ripristinati!"); }
             } else if (type === 'reset_inventory') {
-                if (confirm("Ripristinare i prodotti di default con la Master Inventory integrata?")) { window.inventoryData = [...window.defaultInventory]; saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Magazzino ripristinato con tutti i prodotti (Base + Fatture)!"); }
+                if (confirm("Ripristinare i prodotti di default con la Master Inventory integrata?")) { window.inventoryData = [...window.defaultInventory]; saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Magazzino ripristinato!"); }
             } else if (type === 'remove_pin') {
                 window.appPin = null; saveDataToCloud(); updatePinUI(); window.showAlert("🔓 PIN rimosso.");
             } else if (type === 'reset_all_data') {
                 if (confirm("Reset totale dati?")) {
-                    window.inventoryData = [...window.defaultInventory]; window.suppliersData = [...window.defaultSuppliers]; window.orderHistoryData = []; window.appPin = null;
+                    window.inventoryData = [...window.defaultInventory]; window.suppliersData = [...window.defaultSuppliers]; window.recipesData = [...window.defaultRecipes]; window.orderHistoryData = []; window.appPin = null;
                     saveDataToCloud(); refreshAllViews(); window.showAlert("⚠️ Reset completato.");
                 }
             }
@@ -774,7 +891,7 @@
                 if (hasValidPin) { lab.innerHTML = `✅ PIN Attivo`; lab.style.color = '#2e7d32'; if(rmBtn) rmBtn.style.display = 'inline-block'; }
                 else { lab.innerHTML = '❌ PIN Non Impostato'; lab.style.color = '#e53935'; if(rmBtn) rmBtn.style.display = 'none'; }
             }
-            ['magazzino', 'fornitori', 'sprechi', 'impostazioni'].forEach(sec => {
+            ['magazzino', 'fornitori', 'ricette', 'sprechi', 'impostazioni'].forEach(sec => {
                 const el = document.getElementById(`lock-icon-${sec}`);
                 if (el) el.innerText = hasValidPin ? '🔒' : '🔓';
                 const banner = document.getElementById(`lock-banner-${sec}`);
@@ -827,7 +944,230 @@
             });
         };
 
-        window.refreshAllViews = function() { try { filterItems(); filterStockItems(); filterOrderItems(); filterSuppliers(); filterHistoryItems(); } catch(e){} };
+        window.refreshAllViews = function() { try { filterItems(); filterStockItems(); filterOrderItems(); filterSuppliers(); filterHistoryItems(); filterRecipes(); } catch(e){} };
+
+        // MODULO RICETTE & FOOD COST
+        window.calculateRecipeFoodCost = function(recipe) {
+            let totalCost = 0;
+            const panettoCost = calculatePanettoCost();
+
+            if (recipe.hasPanetto) {
+                totalCost += panettoCost;
+            }
+
+            if (Array.isArray(recipe.ingredients)) {
+                recipe.ingredients.forEach(ing => {
+                    const invItem = window.inventoryData.find(x => String(x.id) === String(ing.itemId));
+                    if (invItem) {
+                        totalCost += (invItem.price || 0) * (parseFloat(ing.qtyDecimal) || 0);
+                    }
+                });
+            }
+
+            const sellingPrice = parseFloat(recipe.priceSEK) || 0;
+            const marginSEK = sellingPrice - totalCost;
+            const foodCostPerc = sellingPrice > 0 ? ((totalCost / sellingPrice) * 100).toFixed(1) : "0.0";
+
+            return {
+                totalCost: parseFloat(totalCost.toFixed(2)),
+                marginSEK: parseFloat(marginSEK.toFixed(2)),
+                foodCostPerc: foodCostPerc
+            };
+        };
+
+        window.filterRecipes = function() {
+            const q = (document.getElementById('search-recipe-input')?.value || '').toLowerCase();
+            const container = document.getElementById('recipe-list'); if (!container) return;
+            container.innerHTML = '';
+
+            const panettoCost = calculatePanettoCost();
+            const panettoBadgeEl = document.getElementById('display-panetto-cost-badge');
+            if (panettoBadgeEl) panettoBadgeEl.innerText = `${panettoCost} SEK`;
+
+            let filtered = window.recipesData.filter(r => r.name.toLowerCase().includes(q));
+            filtered.sort((a,b) => a.name.localeCompare(b.name));
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Nessuna ricetta trovata. Clicca su "+ Nuova Ricetta" per iniziare.</div>';
+                return;
+            }
+
+            filtered.forEach(r => {
+                const fc = calculateRecipeFoodCost(r);
+                let ingHtml = '';
+
+                if (r.hasPanetto) {
+                    ingHtml += `<div class="ingredient-item-row"><span>🍞 Panetto Impasto (285g)</span><b>${panettoCost} SEK</b></div>`;
+                }
+
+                if (Array.isArray(r.ingredients)) {
+                    r.ingredients.forEach(ing => {
+                        const item = window.inventoryData.find(x => String(x.id) === String(ing.itemId));
+                        if (item) {
+                            const ingCost = ((item.price || 0) * (parseFloat(ing.qtyDecimal) || 0)).toFixed(2);
+                            ingHtml += `<div class="ingredient-item-row"><span>• ${item.name} (${ing.qtyDecimal} ${item.unit})</span><b>${ingCost} SEK</b></div>`;
+                        }
+                    });
+                }
+
+                container.innerHTML += `
+                    <div class="recipe-card">
+                        <div class="recipe-header-row">
+                            <div class="recipe-title">🍕 ${r.name}</div>
+                            ${r.hasPanetto ? '<span class="badge-panetto">🍞 Con Panetto</span>' : '<span style="font-size:11px; color:#888;">Nessun Panetto</span>'}
+                        </div>
+                        <div class="foodcost-stats-grid">
+                            <div class="fc-stat-box"><span class="fc-stat-label">Prezzo Vendita</span><span class="fc-stat-val" style="color:var(--primary);">${r.priceSEK} SEK</span></div>
+                            <div class="fc-stat-box"><span class="fc-stat-label">Food Cost</span><span class="fc-stat-val" style="color:#c62828;">${fc.totalCost} SEK (${fc.foodCostPerc}%)</span></div>
+                            <div class="fc-stat-box"><span class="fc-stat-label">Margine</span><span class="fc-stat-val" style="color:#2e7d32;">${fc.marginSEK} SEK</span></div>
+                        </div>
+                        <div style="background:#fafafa; border-radius:6px; padding:8px; margin-top:2px;">
+                            <div style="font-size:11px; font-weight:bold; color:#64748b; margin-bottom:4px;">COMPOSIZIONE INGREDIENTI:</div>
+                            ${ingHtml || '<div style="font-size:11px; color:#999;">Nessun ingrediente aggiuntivo</div>'}
+                        </div>
+                        <div class="action-row-btn">
+                            <button class="btn-action-edit" onclick="openRecipeModal(${r.id})">✏️ Modifica Ricetta</button>
+                            <button class="btn-action-del" onclick="deleteRecipe(${r.id})">🗑️ Elimina</button>
+                        </div>
+                    </div>`;
+            });
+        };
+
+        window.openRecipeModal = function(id = null) {
+            document.getElementById('edit-recipe-id').value = '';
+            document.getElementById('recipe-name-input').value = '';
+            document.getElementById('recipe-price-input').value = '125';
+            document.getElementById('recipe-has-panetto-select').value = 'true';
+            document.getElementById('recipe-ingredients-container').innerHTML = '';
+            document.getElementById('recipe-modal-title').innerText = '🍕 Nuova Ricetta';
+
+            if (id) {
+                const r = window.recipesData.find(x => x.id === id);
+                if (r) {
+                    document.getElementById('edit-recipe-id').value = r.id;
+                    document.getElementById('recipe-name-input').value = r.name;
+                    document.getElementById('recipe-price-input').value = r.priceSEK;
+                    document.getElementById('recipe-has-panetto-select').value = String(r.hasPanetto);
+                    document.getElementById('recipe-modal-title').innerText = '✏️ Modifica Ricetta';
+
+                    if (Array.isArray(r.ingredients)) {
+                        r.ingredients.forEach(ing => {
+                            addRecipeIngredientRow(ing.itemId, ing.qtyDecimal);
+                        });
+                    }
+                }
+            } else {
+                addRecipeIngredientRow(); 
+            }
+
+            updateModalFoodCostPreview();
+            document.getElementById('recipe-modal').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        };
+
+        window.closeRecipeModal = function() {
+            document.getElementById('recipe-modal').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        };
+
+        window.addRecipeIngredientRow = function(selectedItemId = '', qtyVal = '0.010') {
+            const container = document.getElementById('recipe-ingredients-container');
+            const rowId = 'ing-row-' + Date.now() + Math.random().toString(36).substr(2, 4);
+
+            let optionsHtml = '<option value="">-- Seleziona Prodotto --</option>';
+            const sortedInv = [...window.inventoryData].sort((a,b) => a.name.localeCompare(b.name));
+            sortedInv.forEach(item => {
+                const sel = String(item.id) === String(selectedItemId) ? 'selected' : '';
+                optionsHtml += `<option value="${item.id}" data-unit="${item.unit}" data-price="${item.price}" ${sel}>${item.name} (${item.price} SEK/${item.unit})</option>`;
+            });
+
+            const rowHtml = `
+                <div id="${rowId}" style="display:flex; gap:6px; align-items:center; background:#f8fafc; padding:6px; border-radius:6px; border:1px solid #e2e8f0;">
+                    <select class="form-control ing-select-item" style="flex:2; font-size:12px;" onchange="updateModalFoodCostPreview()">${optionsHtml}</select>
+                    <input type="number" step="0.001" class="form-control ing-qty-input" value="${qtyVal}" placeholder="Qtà dec." style="flex:1; font-size:12px;" oninput="updateModalFoodCostPreview()">
+                    <button type="button" onclick="document.getElementById('${rowId}').remove(); updateModalFoodCostPreview();" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; border-radius:4px; padding:4px 8px; font-weight:bold;">✕</button>
+                </div>`;
+            container.innerHTML += rowHtml;
+            updateModalFoodCostPreview();
+        };
+
+        window.updateModalFoodCostPreview = function() {
+            const hasPanetto = document.getElementById('recipe-has-panetto-select').value === 'true';
+            const priceSEK = parseFloat(document.getElementById('recipe-price-input').value) || 0;
+            let total = hasPanetto ? calculatePanettoCost() : 0;
+
+            document.querySelectorAll('#recipe-ingredients-container > div').forEach(row => {
+                const sel = row.querySelector('.ing-select-item');
+                const qtyInp = row.querySelector('.ing-qty-input');
+                if (sel && qtyInp && sel.value) {
+                    const opt = sel.options[sel.selectedIndex];
+                    const itemPrice = parseFloat(opt.getAttribute('data-price')) || 0;
+                    const qty = parseFloat(qtyInp.value) || 0;
+                    total += (itemPrice * qty);
+                }
+            });
+
+            const margin = priceSEK - total;
+            const perc = priceSEK > 0 ? ((total / priceSEK) * 100).toFixed(1) : "0.0";
+            const previewEl = document.getElementById('recipe-modal-cost-preview');
+            if (previewEl) {
+                previewEl.innerHTML = `Costo Totale: <b style="color:#c62828;">${total.toFixed(2)} SEK</b> (${perc}%) | Margine: <b style="color:#2e7d32;">${margin.toFixed(2)} SEK</b>`;
+            }
+        };
+
+        window.saveRecipe = function() {
+            const idVal = document.getElementById('edit-recipe-id').value;
+            const name = document.getElementById('recipe-name-input').value.trim();
+            if (!name) return window.showAlert("⚠️ Inserisci il nome della ricetta.");
+
+            const priceSEK = parseFloat(document.getElementById('recipe-price-input').value) || 0;
+            const hasPanetto = document.getElementById('recipe-has-panetto-select').value === 'true';
+
+            let ingredients = [];
+            document.querySelectorAll('#recipe-ingredients-container > div').forEach(row => {
+                const sel = row.querySelector('.ing-select-item');
+                const qtyInp = row.querySelector('.ing-qty-input');
+                if (sel && qtyInp && sel.value) {
+                    ingredients.push({
+                        itemId: parseInt(sel.value),
+                        qtyDecimal: parseFloat(qtyInp.value) || 0
+                    });
+                }
+            });
+
+            if (idVal) {
+                const r = window.recipesData.find(x => x.id === parseInt(idVal));
+                if (r) {
+                    r.name = name;
+                    r.priceSEK = priceSEK;
+                    r.hasPanetto = hasPanetto;
+                    r.ingredients = ingredients;
+                }
+            } else {
+                const newRecipe = {
+                    id: Date.now(),
+                    name,
+                    priceSEK,
+                    hasPanetto,
+                    ingredients
+                };
+                window.recipesData.push(newRecipe);
+            }
+
+            saveDataToCloud();
+            filterRecipes();
+            closeRecipeModal();
+            window.showAlert("🍕 Ricetta salvata con successo!");
+        };
+
+        window.deleteRecipe = function(id) {
+            if (confirm("Vuoi davvero eliminare questa ricetta?")) {
+                window.recipesData = window.recipesData.filter(x => x.id !== id);
+                saveDataToCloud();
+                filterRecipes();
+                window.showAlert("🗑️ Ricetta eliminata.");
+            }
+        };
 
         // GIACENZE
         window.updateStock = function(id, d) { 
