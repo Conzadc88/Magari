@@ -1,24 +1,26 @@
 <!--
 ====================================================================
-[MAGARI APP - VERSION 3.3.8 - SEPARATE EMAIL/WA TEXTS & LARGER FONTS]
-- App "Magari" - Gestionale ordini e scorte.
-- Firestore (magazzino_db/dati).
-- MODIFICHE:
-  1. Testo Email ottimizzato per Outlook (intestazioni trasparenti in MAIUSCOLO).
-  2. Testo WhatsApp con grassetto nativo (*...*).
-  3. Aumentata la dimensione e leggibilità dei testi nel riepilogo ordine.
+[MAGARI APP - CHANGELOG HISTORICAL REGISTRY]
+- v3.4.1: Unificazione Anagrafica Base Pizzeria + Prodotti Fatture Reali (Master Inventory). Aggiornato numero di versione in tutta la GUI.
+- v3.4.0: Fix critico esecuzione azioni protette da PIN (memorizzazione pendente prima della chiusura modale).
+- v3.3.9: Estrapolazione e integrazione in anagrafica di tutti i nuovi prodotti e prezzi SEK da fatture reali (Stellan Kramer, Daniele FG AB, Jansson Fisk AB, Divinoil).
+- v3.3.8: Introduzione Ricette & Food Cost, Alias Cassa e Registro Vendite con retrodatazione.
+- v3.3.0: Gestione multi-sede (Vasastan / Östermalm) con giacenze e minimi separati.
 ====================================================================
 -->
 <!DOCTYPE html>
 <html lang="it">
 <head>
+    <!-- ====================================================================
+    SEZIONE 1: HEAD, META & STILI CSS
+    ==================================================================== -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#043927">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Magari">
-    <title>Magari v3.3.8 - Ordini & Scorte</title>
+    <title>Magari v3.4.1 - Master Inventory & Desktop</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -107,17 +109,17 @@
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 150; }
         .overlay.active { display: block; }
 
-        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 92%; max-width: 480px; max-height: 88vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.25); display: none; z-index: 210; }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 380px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: none; z-index: 210; }
         .modal.active { display: block; }
-        .modal-title { font-size: 19px; font-weight: bold; margin-bottom: 12px; }
+        .modal-title { font-size: 16px; font-weight: bold; margin-bottom: 12px; }
         .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
-        .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; background-color: white; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+        .form-control { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background-color: white; }
         .pin-input { letter-spacing: 12px; font-size: 24px !important; text-align: center; font-weight: bold; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-        .btn-cancel { background: #eee; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-        .btn-save { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-        .btn-danger { background: var(--danger); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-cancel { background: #eee; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        .btn-save { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        .btn-danger { background: var(--danger); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
 
         .toast-notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #263238; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.3); z-index: 9999; display: none; transition: opacity 0.3s ease; text-align: center; max-width: 90%; border-left: 4px solid var(--warning); }
         .toast-notification.show { display: block; }
@@ -138,16 +140,17 @@
             .sticky-checkout-container { max-width: 1200px; }
             .content-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
             .history-card, .empty-placeholder, .settings-card { grid-column: 1 / -1; }
-            .modal { max-width: 580px; }
+            .modal { max-width: 520px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- NOTIFICA TOAST -->
+    <!-- ====================================================================
+    SEZIONE 2: STRUTTURA HTML & MODALI
+    ==================================================================== -->
     <div id="toast-notification" class="toast-notification"></div>
 
-    <!-- MODALE SELEZIONE SEDE -->
     <div class="page-lock-banner" id="location-guard-banner" style="display: flex;">
         <div class="page-lock-box" style="max-width: 340px;">
             <div style="font-size: 32px; margin-bottom: 8px;">📍</div>
@@ -163,20 +166,19 @@
     <div class="app-container">
         <div class="overlay" id="overlay" onclick="closeAll()"></div>
 
-        <!-- MENU LATERALE DRAWER -->
         <div class="drawer" id="drawer">
             <div class="drawer-header">
                 <div class="brand-title" style="font-size: 26px;">MAGARI</div>
-                <div class="brand-subtitle" style="font-size: 9px; letter-spacing: 2px;">v3.3.8 Clean Email & Larger Fonts</div>
+                <div class="brand-subtitle" style="font-size: 9px; letter-spacing: 2px;">v3.4.1 Master Inventory</div>
             </div>
             <ul class="drawer-menu">
                 <li onclick="navigateTo('ordini')">🛒 Ordini</li>
                 <li onclick="navigateTo('scorte')">📦 Scorte (Giacenze)</li>
                 <li onclick="navigateTo('storico')">📜 Storico Ordini</li>
-                <li onclick="navigateTo('magazzino')">🛠️ Magazzino <span id="lock-icon-magazzino">🔒</span></li>
-                <li onclick="navigateTo('fornitori')">🚚 Fornitori <span id="lock-icon-fornitori">🔒</span></li>
-                <li onclick="navigateTo('sprechi')">📊 Report Consumi <span id="lock-icon-sprechi">🔒</span></li>
-                <li onclick="navigateTo('impostazioni')">⚙️ Impostazioni <span id="lock-icon-impostazioni">🔒</span></li>
+                <li onclick="navigateTo('magazzino')">🛠️ Magazzino <span id="lock-icon-magazzino">🔓</span></li>
+                <li onclick="navigateTo('fornitori')">🚚 Fornitori <span id="lock-icon-fornitori">🔓</span></li>
+                <li onclick="navigateTo('sprechi')">📊 Report Consumi <span id="lock-icon-sprechi">🔓</span></li>
+                <li onclick="navigateTo('impostazioni')">⚙️ Impostazioni <span id="lock-icon-impostazioni">🔓</span></li>
             </ul>
         </div>
 
@@ -184,7 +186,7 @@
             <button class="menu-btn" onclick="toggleMenu()">☰</button>
             <div class="header-brand-text">
                 <div class="brand-title">MAGARI</div>
-                <div class="brand-subtitle">v3.3.8 Clean Email & Larger Fonts</div>
+                <div class="brand-subtitle">v3.4.1 Master Inventory</div>
             </div>
             <div class="page-badge" id="page-title">Ordini</div>
         </div>
@@ -194,8 +196,8 @@
             <button onclick="promptChangeLocation()" style="background: white; border: 1px solid #2e7d32; color: #2e7d32; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">Cambia Sede</button>
         </div>
 
-        <!-- 1. SEZIONE ORDINI -->
-        <div id="view-ordini" class="view-section active" data-requires-location="true">
+        <!-- 1. ORDINI -->
+        <div id="view-ordini" class="view-section active">
             <div class="top-bar-container">
                 <input type="text" id="order-operator-name" class="operator-input" placeholder="👤 Nome Operatore (Chi ordina?)" required>
                 <div style="display: flex; gap: 8px; align-items: center;">
@@ -233,8 +235,8 @@
             <div class="sticky-checkout-container"><button class="btn-checkout" onclick="generateOrderSummary()">📋 Genera Riepilogo Ordine</button></div>
         </div>
 
-        <!-- 2. SEZIONE SCORTE -->
-        <div id="view-scorte" class="view-section" data-requires-location="true">
+        <!-- 2. SCORTE -->
+        <div id="view-scorte" class="view-section">
             <div class="top-bar-container">
                 <input type="text" id="stock-operator-name" class="operator-input" placeholder="✍️ Nome / Firma Operatore Giacenze" required>
                 <button class="btn-excel" onclick="promptExportExcelModal()">📊 Export Inventory (English Excel)</button>
@@ -269,8 +271,8 @@
             <div class="content-list" id="stock-list"></div>
         </div>
 
-        <!-- 3. SEZIONE STORICO -->
-        <div id="view-storico" class="view-section" data-requires-location="true">
+        <!-- 3. STORICO -->
+        <div id="view-storico" class="view-section">
             <div class="top-bar-container">
                 <button class="reset-btn" onclick="requestPinAction('clear_history')">🔒 🗑️ Svuota Tutto lo Storico Ordini</button>
                 <select id="filter-history-location" class="filter-select" onchange="filterHistoryItems()">
@@ -282,9 +284,9 @@
             <div class="content-list" id="history-list"></div>
         </div>
 
-        <!-- 4. SEZIONE MAGAZZINO -->
-        <div id="view-magazzino" class="view-section" data-requires-location="false">
-            <div class="page-lock-banner" id="lock-banner-magazzino" style="display: flex;">
+        <!-- 4. MAGAZZINO -->
+        <div id="view-magazzino" class="view-section">
+            <div class="page-lock-banner" id="lock-banner-magazzino" style="display: none;">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Magazzino Bloccato</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-magazzino" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('magazzino')">Conferma</button></div></div>
             </div>
             <div class="top-bar-container">
@@ -309,18 +311,18 @@
             <div class="content-list" id="inventory-list"></div>
         </div>
 
-        <!-- 5. SEZIONE FORNITORI -->
-        <div id="view-fornitori" class="view-section" data-requires-location="false">
-            <div class="page-lock-banner" id="lock-banner-fornitori" style="display: flex;">
+        <!-- 5. FORNITORI -->
+        <div id="view-fornitori" class="view-section">
+            <div class="page-lock-banner" id="lock-banner-fornitori" style="display: none;">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Fornitori Bloccati</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-fornitori" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('fornitori')">Conferma</button></div></div>
             </div>
             <div class="top-bar-container"><div class="search-row"><input type="text" id="search-supplier-input" class="search-input" placeholder="Cerca fornitore..." oninput="filterSuppliers()"><button class="add-btn" onclick="openAddSupplierModal()">+ Fornitore</button></div></div>
             <div class="content-list" id="suppliers-list"></div>
         </div>
 
-        <!-- 6. SEZIONE REPORT CONSUMI -->
-        <div id="view-sprechi" class="view-section" data-requires-location="false">
-            <div class="page-lock-banner" id="lock-banner-sprechi" style="display: flex;">
+        <!-- 6. REPORT CONSUMI -->
+        <div id="view-sprechi" class="view-section">
+            <div class="page-lock-banner" id="lock-banner-sprechi" style="display: none;">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Report Bloccati</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-sprechi" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('sprechi')">Conferma</button></div></div>
             </div>
             <div class="top-bar-container">
@@ -337,9 +339,9 @@
             </div>
         </div>
 
-        <!-- 7. SEZIONE IMPOSTAZIONI -->
-        <div id="view-impostazioni" class="view-section" data-requires-location="false">
-            <div class="page-lock-banner" id="lock-banner-impostazioni" style="display: flex;">
+        <!-- 7. IMPOSTAZIONI -->
+        <div id="view-impostazioni" class="view-section">
+            <div class="page-lock-banner" id="lock-banner-impostazioni" style="display: none;">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Impostazioni Bloccate</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-impostazioni" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('impostazioni')">Conferma</button></div></div>
             </div>
             <div class="settings-card">
@@ -348,7 +350,7 @@
                 <div style="display: flex; gap: 8px; margin-bottom:12px;"><button class="btn-save" onclick="openSetPinModal()">Imposta / Modifica PIN</button><button class="btn-danger" id="btn-remove-pin" onclick="requestPinAction('remove_pin')" style="display:none;">Rimuovi PIN</button></div>
                 <hr style="border:0; border-top:1px solid #eee; margin: 8px 0;">
                 <button class="reset-btn" onclick="requestPinAction('reset_suppliers')">🔒 🔄 Ripristina Fornitori di Default</button>
-                <button class="reset-btn" onclick="requestPinAction('reset_inventory')">🔒 🔄 Ripristina Prodotti di Default (Magazzino)</button>
+                <button class="reset-btn" onclick="requestPinAction('reset_inventory')">🔒 🔄 Ripristina Prodotti di Default (Magazzino Master)</button>
                 <button class="btn-danger" onclick="requestPinAction('reset_all_data')" style="width:100%; margin-top: 6px;">🔒 ⚠️ RESET TOTALE COMPLETO</button>
             </div>
         </div>
@@ -378,9 +380,9 @@
     </div>
 
     <div class="modal" id="summary-modal">
-        <div class="modal-title" style="font-size:20px; color:var(--primary);">📋 Riepilogo Ordine Generato</div>
+        <div class="modal-title">📋 Riepilogo Ordine Generato</div>
         <div id="summary-content"></div>
-        <div class="modal-actions" style="margin-top:14px;"><button class="btn-cancel" onclick="closeSummaryModal()">Chiudi</button></div>
+        <div class="modal-actions" style="margin-top:12px;"><button class="btn-cancel" onclick="closeSummaryModal()">Chiudi</button></div>
     </div>
 
     <div class="modal" id="add-modal">
@@ -410,8 +412,11 @@
         <div class="modal-actions"><button class="btn-cancel" onclick="closeAddSupplierModal()">Annulla</button><button class="btn-save" onclick="saveSupplier()">Salva</button></div>
     </div>
 
-    <!-- SCRIPT LOGICA APPLICATIVA -->
+    <!-- LOGICA JAVASCRIPT -->
     <script type="module">
+        // ====================================================================
+        // SEZIONE 3: FIREBASE CONFIG & STATO GLOBALE (JS)
+        // ====================================================================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -431,37 +436,7 @@
         window.appPin = null; 
         window.pendingPinAction = null;
         window.activeLocation = null;
-        window.supplierNotesMap = {}; 
-
-        window.showAlert = function(msg) {
-            const toast = document.getElementById('toast-notification');
-            if (toast) {
-                toast.innerText = msg;
-                toast.classList.add('show');
-                setTimeout(() => { toast.classList.remove('show'); }, 3500);
-            }
-        };
-
-        window.translateUnitToSwedish = function(unit) {
-            const map = {
-                "Bottiglie": "flaskor",
-                "Unità": "st",
-                "Kg": "kg",
-                "Litri": "liter",
-                "Cartoni": "kartonger",
-                "Sacchi": "säckar"
-            };
-            return map[unit] || unit || "st";
-        };
-
-        window.getCategoryEmoji = function(cat) {
-            const map = {
-                "Latticini": "🧀", "Farine & Secco": "🌾", "Conserve & Pomodoro": "🍅",
-                "Salumi & Carni": "🥩", "Alcolici": "🍷", "Bevande": "🥤",
-                "Surgelati": "❄️", "Ortofrutta": "🥗", "Pulizia & Monouso": "🧹", "Altro": "📦"
-            };
-            return map[cat] || "📦";
-        };
+        window.lastOrderNote = '';
 
         window.defaultSuppliers = [
             { id: 1700000001, name: "Paolo's Tiramisu", phone: "0764211121", email: "paolo@tiramisusthlm.se", color: "#f57c00" },
@@ -477,8 +452,160 @@
             { id: 1700000011, name: "Ekerö Brygghus AB", phone: "0768837808", email: "kerryn@ekerobrygghus.se", color: "#00897b" }
         ];
 
+        window.defaultInventory = [
+            // --- PRODOTTI BASE PIZZERIA & CONSUMABILI ---
+            {"id":1800000000,"name":"Tiramisù CLASSIC portionsburk i glas","category":"Altro","supplierId":1700000001,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":39.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000001,"name":"Taralli Traditionell Hink 2,5 kg","category":"Farine & Secco","supplierId":1700000002,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":250.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000002,"name":"Dabramo Classico Bryggkaffe, 3 kg/fp","category":"Altro","supplierId":1700000003,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":600.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000003,"name":"Dabramo Espressopods, Classico","category":"Altro","supplierId":1700000003,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":392.86,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000004,"name":"NITRILHANDSKE OPUD SV L 10","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":52.82,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000005,"name":"EASY DEGREASER FETTLÖS 500M","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":371.87,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000006,"name":"DISKDUK BLÅ 50ST","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":128.97,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000007,"name":"DISKSVAMP GROV GUL/GR 10","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":45.31,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000008,"name":"TORKDUK ONEDAY 38X42 VIS15","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":178.5,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000009,"name":"SOPSÄCK SVART 125L 25ST","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":294.98,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000010,"name":"TORKRULLE BIG KITCHEN ROLL","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":260.02,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000011,"name":"STORM MASKINDISK 12KG","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":796.88,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000012,"name":"EXPERT SOFT SKÖLJMEDEL 2KG","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":111.57,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000013,"name":"AJAX ALLRENGÖRING 5L","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":285.91,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000014,"name":"PLÅSTER TEXTIL REF 6X40ST","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":310.28,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000015,"name":"MAGARI PIZZAKRT 100ST L","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":399.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000016,"name":"PIZZAPAPPER 28X28C 800ST","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":282.43,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000017,"name":"STORKÖKSFILM REF 45X300M","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":464.89,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000018,"name":"SERV POCKET 40 SV 1/8AIR 7","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":669.75,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000019,"name":"SERV POCK 40 VIT 1/8 AIR 7","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":466.65,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000020,"name":"TVÅL OPARFYMERAD TORK S4","category":"Pulizia & Monouso","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":733.91,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000021,"name":"GRAN RETTINATO formaggio 5kg","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":138.24,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000022,"name":"Prosciutto MECHEL ca 7kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":129.12,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000023,"name":"Burrata 8x100g Nonno Nanni","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":15.51,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000024,"name":"Mozzarella BUFFEL 20x125g","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":17.74,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000025,"name":"Mjöl Pizza Oro d'Irpinia 25kg [tipo 0]","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Sacchi","price":379.06,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000026,"name":"Pomodoro San Marzano DOP 6x2,5kg","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":389.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000027,"name":"Pomodoro Polpa 3x5kg Solania","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":289.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000028,"name":"Frityrolja 10 Liter","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":229.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000029,"name":"Prosciutto di Parma DOP ca 7kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":219.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000030,"name":"Salame Napoli Dolce ca 1kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":119.2,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000031,"name":"Spianata Piccante Calabra ca 1,5kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":129.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000032,"name":"Fior di Latte MONTI Fryst 9,36kg","category":"Surgelati","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":1004.26,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000033,"name":"Salame Piccante Calabrese ca 1kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":119.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000034,"name":"Pancetta Arrotolata ca 2kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":139.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000035,"name":"Porchetta di Ariccia ca 3kg","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":159.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000036,"name":"Ricotta 1,5kg IT","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":75.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000037,"name":"Mascarpone 500g","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":39.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000038,"name":"Mjölk Laktosfri RÖD 3% 1L","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":18.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000039,"name":"Provola Affumicata ca 2kg","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":142.45,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000040,"name":"Grädde RED LABEL 35% 1L","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":39.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000041,"name":"Nduja i burk 200g","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":49.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000042,"name":"Pesto Genovese 500g","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":69.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000043,"name":"Nötfärs FR 10% 6x2kg","category":"Surgelati","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":113.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000044,"name":"Karl Johan Tärnad 1kg Italy","category":"Surgelati","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":133.06,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000045,"name":"Kronärtskockor i olja 3kg","category":"Conserve & Pomodoro","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":159.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000046,"name":"Salsiccia FÄRSK natur Peveri","category":"Salumi & Carni","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":64.33,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000047,"name":"Smör Italy 4x1000g Parmareggio","category":"Latticini","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":380.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000048,"name":"Svampar Blanda Fryst 1kg","category":"Surgelati","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":81.3,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000049,"name":"Jäst Färsk 500g","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":19.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000050,"name":"Aromatica Krydda 1kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":79.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000051,"name":"Oregano Torkad 1kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":99.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000052,"name":"Salt Fint 1kg","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":12.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000053,"name":"Chiliflakes 500g","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":49.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000059,"name":"Potatis","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":12.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000060,"name":"Lök röd","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":14.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000061,"name":"Vitlök","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":49.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000065,"name":"Schalottenlök","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":29.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000066,"name":"Körsbärstomater ask x500g","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":24.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000069,"name":"Oliver Gröna Nocellara 3kg","category":"Conserve & Pomodoro","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":137.5,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000070,"name":"Morötter","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":12.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000071,"name":"Chili Röd Färsk","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":89.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000072,"name":"Linser gröna 900g","category":"Farine & Secco","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Unità","price":35.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000073,"name":"Tomat","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":49.9,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000074,"name":"Lök gul","category":"Ortofrutta","supplierId":1700000006,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Kg","price":9.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000075,"name":"Vannameiräka skalad 16-20, fryst","category":"Surgelati","supplierId":1700000007,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":125.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000076,"name":"Orecchiette färsk","category":"Farine & Secco","supplierId":1700000008,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Sacchi","price":45.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000077,"name":"Cavatelli färsk lebba 500 gr","category":"Farine & Secco","supplierId":1700000008,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":45.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1800000078,"name":"Mjöl Pizza Oro d'Irpinia 25kg [tipo 1]","category":"Farine & Secco","supplierId":1700000005,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Sacchi","price":379.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+
+            // --- VINI & ALCOLICI ---
+            {"id":1900000001,"name":"Spumante Cuvée Brut Vandori","category":"Alcolici","supplierId":1700000009,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":73.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000010,"name":"Terre di Mario Rosso","category":"Alcolici","supplierId":1700000009,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":67.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000017,"name":"Chianti Governo","category":"Alcolici","supplierId":1700000009,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":117.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000023,"name":"Brunello di Montalcino","category":"Alcolici","supplierId":1700000009,"minQty_vasastan":1,"minQty_ostermalm":1,"orderQty":0,"unit":"Bottiglie","price":485.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000025,"name":"Aglianico Villa Dei Greci","category":"Alcolici","supplierId":1700000009,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":67.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000030,"name":"Terre di Mario Bianco","category":"Alcolici","supplierId":1700000009,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":67.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000036,"name":"Vermentino Trastella Villa Trasqua","category":"Alcolici","supplierId":1700000009,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":130.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000037,"name":"Vermentino Colle Adimari","category":"Alcolici","supplierId":1700000009,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":130.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000003,"name":"Berlucchi '61 Extra Brut","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":220.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000006,"name":"Champagne 1er cru","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":299.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000011,"name":"Cabernet Sauvignon Ca Vegar","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":88.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000012,"name":"Primitivo Nero Marone","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":92.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000013,"name":"Montepulciano d'Abruzzo Jasci","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":97.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000014,"name":"Nebbiolo d'Alba","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":108.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000015,"name":"Aglianico Claudio Quarta","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":105.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000016,"name":"Valpolicella Ripasso","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":114.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000018,"name":"Pinot Nero","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":116.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000020,"name":"Taurasi","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":1,"minQty_ostermalm":1,"orderQty":0,"unit":"Bottiglie","price":269.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000021,"name":"Barolo Sovagna","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":1,"minQty_ostermalm":1,"orderQty":0,"unit":"Bottiglie","price":270.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000022,"name":"Amarone della Valpolicella","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":1,"minQty_ostermalm":1,"orderQty":0,"unit":"Bottiglie","price":299.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000031,"name":"Pinot Grigio Ca Vegar","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":86.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000032,"name":"Langhe Sauvignon","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":102.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000033,"name":"Chardonnay Jasci","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":97.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000034,"name":"Fiano Claudio Quarta","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":105.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000035,"name":"Greco Claudio Quarta","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":105.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000041,"name":"Roero Arneis","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":102.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000042,"name":"Falanghina Claudio Quarta","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":105.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000043,"name":"Castelnuovo bardolino Rosè","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":88.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000072,"name":"Amaro del capo","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":289.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000073,"name":"Grappa Bianca Pinot Grigio","category":"Alcolici","supplierId":1700000010,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":189.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+
+            // --- BIRRE & SPIRITS ---
+            {"id":1900000050,"name":"Magari Lager","category":"Bevande","supplierId":1700000011,"minQty_vasastan":5,"minQty_ostermalm":5,"orderQty":0,"unit":"Litri","price":49.46,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000051,"name":"Hazy IPA","category":"Bevande","supplierId":1700000011,"minQty_vasastan":5,"minQty_ostermalm":5,"orderQty":0,"unit":"Litri","price":63.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000052,"name":"Tom's Pils","category":"Bevande","supplierId":1700000011,"minQty_vasastan":5,"minQty_ostermalm":5,"orderQty":0,"unit":"Litri","price":52.25,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000053,"name":"Birra del Borgo 'Lisa' 5% 500ml","category":"Bevande","supplierId":1700000002,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Cartoni","price":360.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000054,"name":"Birra del Borgo - Maledetta","category":"Bevande","supplierId":1700000002,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":21.0,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000060,"name":"Aperol","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":159.76,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000061,"name":"Campari","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":221.36,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000062,"name":"Martini","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":101.25,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000063,"name":"Gin Beefeter","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":221.71,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000064,"name":"Vodka Absolut","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":210.12,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000065,"name":"Limoncello","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":174.08,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000066,"name":"Amaretto Disaronno","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":239.17,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000067,"name":"Borghetti","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":229.96,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000068,"name":"Blue Curaçao","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":1,"minQty_ostermalm":1,"orderQty":0,"unit":"Bottiglie","price":148.19,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000069,"name":"Orange Curaçao","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":1,"minQty_ostermalm":1,"orderQty":0,"unit":"Bottiglie","price":196.23,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000070,"name":"Triple Sec","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":1,"minQty_ostermalm":1,"orderQty":0,"unit":"Bottiglie","price":198.80,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+            {"id":1900000071,"name":"Fernet Branca","category":"Alcolici","supplierId":1700000004,"minQty_vasastan":2,"minQty_ostermalm":2,"orderQty":0,"unit":"Bottiglie","price":306.95,"qty_vasastan":0.0,"qty_ostermalm":0.0,"isFavorite":false},
+
+            // --- PRODOTTI SPECIALI/ESCLUSIVI DA ULTIME FATTURE ---
+            { id: 2000000001, name: "The Fat Lady Sings 75cl", category: "Alcolici", supplierId: 1700000010, minQty_vasastan: 6, minQty_ostermalm: 6, orderQty: 0, unit: "Bottiglie", price: 116.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000002, name: "Campania Aglianico Virata Casino Nitti", category: "Alcolici", supplierId: 1700000010, minQty_vasastan: 6, minQty_ostermalm: 6, orderQty: 0, unit: "Bottiglie", price: 105.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000003, name: "Champinjoner (Svamp)", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 41.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000004, name: "Napolitana Salladsmix 400g", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 48.50, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000005, name: "Tomat Kvist", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 5, minQty_ostermalm: 5, orderQty: 0, unit: "Kg", price: 35.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000006, name: "Persilja Blad", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 1, minQty_ostermalm: 1, orderQty: 0, unit: "Kg", price: 69.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000007, name: "Citron", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 24.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000008, name: "Apelsin Press", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 23.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000009, name: "Rosmarin Bunt", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 24.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000010, name: "Basilika Bunt", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 10, minQty_ostermalm: 10, orderQty: 0, unit: "Unità", price: 22.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000011, name: "Coca-Cola 33cl (Box x30)", category: "Bevande", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Cartoni", price: 199.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000012, name: "Coca-Cola Zero 33cl (Box x30)", category: "Bevande", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Cartoni", price: 199.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000013, name: "Paprika Mix", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 39.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000014, name: "Zucchini", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 26.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000015, name: "Aubergine", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 42.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000016, name: "Gurka Ofilmad", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 5, minQty_ostermalm: 5, orderQty: 0, unit: "Kg", price: 32.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000017, name: "Avokado Fryst Tärnad 1kg", category: "Surgelati", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Kg", price: 89.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000018, name: "Tonfisk i Olja 1.7kg", category: "Conserve & Pomodoro", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 132.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000019, name: "Rucola 500g", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Unità", price: 51.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000020, name: "Potatis Tvättade", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 3, minQty_ostermalm: 3, orderQty: 0, unit: "Kg", price: 16.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000021, name: "Purjolök", category: "Ortofrutta", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Kg", price: 27.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000022, name: "Äggvita 1L", category: "Altro", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 49.90, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000023, name: "Apelsinjuice 1.75L", category: "Bevande", supplierId: 1700000006, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 49.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000024, name: "Gravad Lax (Fryst)", category: "Surgelati", supplierId: 1700000007, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Kg", price: 269.00, qty_vasastan: 0, qty_ostermalm: 0 },
+            { id: 2000000025, name: "Tagliata di Tartufo Nero Estivo 310g", category: "Conserve & Pomodoro", supplierId: 1700000002, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit: "Unità", price: 422.00, qty_vasastan: 0, qty_ostermalm: 0 }
+        ];
+
         window.suppliersData = [...window.defaultSuppliers];
-        window.inventoryData = [];
+        window.inventoryData = [...window.defaultInventory];
+        window.recipesData = [];
         window.orderHistoryData = [];
 
         onSnapshot(appDocRef, (snapshot) => {
@@ -486,8 +613,14 @@
                 const data = snapshot.data();
                 if (data.suppliers) window.suppliersData = data.suppliers;
                 if (data.inventory) window.inventoryData = data.inventory;
+                if (data.recipes) window.recipesData = data.recipes;
                 if (data.history) window.orderHistoryData = data.history;
-               // if (data.pin) window.appPin = String(data.pin);
+                
+                if (data.pin !== undefined && data.pin !== null && data.pin !== "null" && String(data.pin).trim() !== "") {
+                    window.appPin = String(data.pin);
+                } else {
+                    window.appPin = null;
+                }
             }
             window.populateAllSupplierFilters();
             window.updatePinUI();
@@ -499,10 +632,40 @@
                 await setDoc(appDocRef, {
                     inventory: window.inventoryData,
                     suppliers: window.suppliersData,
+                    recipes: window.recipesData,
                     history: window.orderHistoryData,
                     pin: window.appPin
                 }, { merge: true });
             } catch (e) { console.error(e); }
+        };
+
+        // ====================================================================
+        // SEZIONE 4: MODULI LOGICA DI BUSINESS (JS)
+        // ====================================================================
+        window.showAlert = function(msg) {
+            const toast = document.getElementById('toast-notification');
+            if (toast) {
+                toast.innerText = msg;
+                toast.classList.add('show');
+                setTimeout(() => { toast.classList.remove('show'); }, 3500);
+            }
+        };
+
+        window.translateUnitToSwedish = function(unit) {
+            const map = {
+                "Bottiglie": "flaskor", "Unità": "st", "Kg": "kg",
+                "Litri": "liter", "Cartoni": "kartonger", "Sacchi": "säckar"
+            };
+            return map[unit] || unit || "st";
+        };
+
+        window.getCategoryEmoji = function(cat) {
+            const map = {
+                "Latticini": "🧀", "Farine & Secco": "🌾", "Conserve & Pomodoro": "🍅",
+                "Salumi & Carni": "🥩", "Alcolici": "🍷", "Bevande": "🥤",
+                "Surgelati": "❄️", "Ortofrutta": "🥗", "Pulizia & Monouso": "🧹", "Altro": "📦"
+            };
+            return map[cat] || "📦";
         };
 
         window.setActiveLocation = function(loc) {
@@ -514,7 +677,7 @@
         };
 
         window.promptChangeLocation = function() { document.getElementById('location-guard-banner').style.display = 'flex'; };
-        window.toggleMenu = function() { document.getElementById('drawer').classList.toggle('open'); document.getElementById('overlay').classList.remove('active'); };
+        window.toggleMenu = function() { document.getElementById('drawer').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); };
         window.closeAll = function() { document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); document.getElementById('overlay').classList.remove('active'); document.getElementById('drawer').classList.remove('open'); };
 
         window.navigateTo = function(sec) {
@@ -528,19 +691,31 @@
                 const pInp = document.getElementById(`pin-input-${s}`);
                 if (pInp) pInp.value = '';
                 const banner = document.getElementById(`lock-banner-${s}`);
-                if (banner && window.appPin) banner.style.display = 'flex';
+                if (banner) {
+                    if (window.appPin && window.appPin !== "null") {
+                        banner.style.display = 'flex';
+                    } else {
+                        banner.style.display = 'none';
+                    }
+                }
             });
         };
 
         window.verifySectionPin = function(sec) {
+            if (!window.appPin || window.appPin === "null") {
+                const banner = document.getElementById(`lock-banner-${sec}`);
+                if (banner) banner.style.display = 'none';
+                return;
+            }
             const val = document.getElementById(`pin-input-${sec}`).value;
             if (String(val) === String(window.appPin)) {
-                document.getElementById(`lock-banner-${sec}`).style.display = 'none';
+                const banner = document.getElementById(`lock-banner-${sec}`);
+                if (banner) banner.style.display = 'none';
             } else { window.showAlert("❌ PIN Errato!"); }
         };
 
         window.requestPinAction = function(type, extraData = null) {
-            if (!window.appPin) {
+            if (!window.appPin || window.appPin === "null") {
                 executeProtectedAction(type, extraData);
             } else {
                 window.pendingPinAction = { type, extraData };
@@ -551,12 +726,18 @@
         };
 
         window.verifyPin = function() {
-            if (String(document.getElementById('input-verify-pin').value) === String(window.appPin)) {
+            if (!window.appPin || window.appPin === "null" || String(document.getElementById('input-verify-pin').value) === String(window.appPin)) {
+                const actionToRun = window.pendingPinAction;
                 closePinModal();
-                if (window.pendingPinAction) executeProtectedAction(window.pendingPinAction.type, window.pendingPinAction.extraData);
+                if (actionToRun) executeProtectedAction(actionToRun.type, actionToRun.extraData);
             } else { window.showAlert("❌ PIN Errato!"); }
         };
-        window.closePinModal = function() { document.getElementById('pin-modal').classList.remove('active'); document.getElementById('overlay').classList.remove('active'); window.pendingPinAction = null; };
+
+        window.closePinModal = function() { 
+            document.getElementById('pin-modal').classList.remove('active'); 
+            document.getElementById('overlay').classList.remove('active'); 
+            window.pendingPinAction = null; 
+        };
 
         window.executeProtectedAction = function(type, extraData) {
             if (type === 'reset_stock_quantities') {
@@ -574,31 +755,36 @@
             } else if (type === 'reset_suppliers') {
                 if (confirm("Ripristinare i fornitori di default?")) { window.suppliersData = [...window.defaultSuppliers]; saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Fornitori ripristinati!"); }
             } else if (type === 'reset_inventory') {
-                if (confirm("Ripristinare i prodotti di default?")) { window.inventoryData = []; saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Magazzino ripristinato!"); }
+                if (confirm("Ripristinare i prodotti di default con la Master Inventory integrata?")) { window.inventoryData = [...window.defaultInventory]; saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Magazzino ripristinato con tutti i prodotti (Base + Fatture)!"); }
             } else if (type === 'remove_pin') {
                 window.appPin = null; saveDataToCloud(); updatePinUI(); window.showAlert("🔓 PIN rimosso.");
             } else if (type === 'reset_all_data') {
                 if (confirm("Reset totale dati?")) {
-                    window.inventoryData = []; window.suppliersData = [...window.defaultSuppliers]; window.orderHistoryData = []; window.appPin = null;
+                    window.inventoryData = [...window.defaultInventory]; window.suppliersData = [...window.defaultSuppliers]; window.orderHistoryData = []; window.appPin = null;
                     saveDataToCloud(); refreshAllViews(); window.showAlert("⚠️ Reset completato.");
                 }
             }
         };
 
         window.updatePinUI = function() {
+            const hasValidPin = window.appPin && window.appPin !== "null";
             const lab = document.getElementById('pin-status-label');
             const rmBtn = document.getElementById('btn-remove-pin');
             if (lab) {
-                if (window.appPin) { lab.innerHTML = `✅ PIN Attivo`; lab.style.color = '#2e7d32'; if(rmBtn) rmBtn.style.display = 'inline-block'; }
+                if (hasValidPin) { lab.innerHTML = `✅ PIN Attivo`; lab.style.color = '#2e7d32'; if(rmBtn) rmBtn.style.display = 'inline-block'; }
                 else { lab.innerHTML = '❌ PIN Non Impostato'; lab.style.color = '#e53935'; if(rmBtn) rmBtn.style.display = 'none'; }
             }
             ['magazzino', 'fornitori', 'sprechi', 'impostazioni'].forEach(sec => {
                 const el = document.getElementById(`lock-icon-${sec}`);
-                if (el) el.innerText = window.appPin ? '🔒' : '🔓';
+                if (el) el.innerText = hasValidPin ? '🔒' : '🔓';
+                const banner = document.getElementById(`lock-banner-${sec}`);
+                if (banner && !hasValidPin) {
+                    banner.style.display = 'none';
+                }
             });
         };
 
-        window.openSetPinModal = function() { document.getElementById('old-pin-group').style.display = window.appPin ? 'block' : 'none'; document.getElementById('set-pin-modal').classList.add('active'); };
+        window.openSetPinModal = function() { document.getElementById('old-pin-group').style.display = (window.appPin && window.appPin !== "null") ? 'block' : 'none'; document.getElementById('set-pin-modal').classList.add('active'); };
         window.closeSetPinModal = function() { document.getElementById('set-pin-modal').classList.remove('active'); };
         window.saveNewPin = function() {
             const p1 = document.getElementById('input-new-pin').value;
@@ -718,7 +904,7 @@
             });
         };
 
-        // ORDINI CON TESTI SEPARATI PER EMAIL (CHIARI E MAIUSCOLI) E WHATSAPP (*GRASSETTO*)
+        // ORDINI
         window.filterOrderItems = function() {
             const q = (document.getElementById('search-order-input')?.value || '').toLowerCase();
             const cat = document.getElementById('filter-order-category')?.value || '';
@@ -773,12 +959,12 @@
             const items = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
             if (items.length === 0) return window.showAlert("🛒 Nessun prodotto selezionato per l'ordine.");
 
-            window.renderSummaryModalContent(op, dateVal);
+            window.renderSummaryModalContent(op, dateVal, window.lastOrderNote);
             document.getElementById('summary-modal').classList.add('active');
             document.getElementById('overlay').classList.add('active');
         };
 
-        window.renderSummaryModalContent = function(op, dateVal) {
+        window.renderSummaryModalContent = function(op, dateVal, currentNote) {
             const items = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
             let groups = {};
             items.forEach(i => { if(!groups[i.supplierId]) groups[i.supplierId] = []; groups[i.supplierId].push(i); });
@@ -787,119 +973,60 @@
             const todayStr = new Date().toLocaleDateString('it-IT');
             const locName = window.activeLocation || 'Magari';
 
+            let noteHtml = `
+                <div style="margin-bottom:14px; background:#f0f7f4; padding:10px; border-radius:8px; border:1px solid var(--primary);">
+                    <label style="font-weight:bold; font-size:12px; color:var(--primary); display:block; margin-bottom:4px;">💬 Note / Commento per il fornitore (Anteckning):</label>
+                    <textarea id="modal-order-note" class="form-control" rows="2" placeholder="Scrivi qui eventuali note (es. orario di consegna, raccomandazioni...)" style="font-size:13px; resize:vertical;" oninput="window.onNoteChangedInSummary('${op}', '${dateVal}')">${currentNote || ''}</textarea>
+                </div>
+            `;
+            c.innerHTML += noteHtml;
+
             for (let sId in groups) {
                 const sup = window.suppliersData.find(s => String(s.id) === String(sId));
                 const supplierEmail = sup?.email || '';
-                const supplierNote = window.supplierNotesMap[sId] || '';
 
-                // 1. TESTO PER WHATSAPP (Sintassi *grassetto*)
-                let waTxt = `*BESTÄLLNING MAGARI - ${locName.toUpperCase()}*\n`;
-                waTxt += `👤 Beställare: ${op}\n`;
-                waTxt += `🚚 Önskat leveransdatum: *${dateVal}*\n`;
-                if (supplierNote.trim()) waTxt += `💬 Anteckning: *${supplierNote.trim()}*\n`;
-                waTxt += `\nProdukter:\n`;
+                let txt = `BESTÄLLNING MAGARI - ${locName.toUpperCase()}\n`;
+                txt += `Beställare: ${op}\n`;
+                txt += `Önskat leveransdatum: ${dateVal}\n`;
+                if (currentNote) txt += `Anteckning: ${currentNote}\n`;
+                txt += `\nProdukter:\n`;
+
+                let html = `<div style="background:#f9f9f9; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #e2e8f0;">
+                    <div style="font-weight:bold; color:var(--primary); font-size:15px; margin-bottom:6px;">🚚 ${sup?.name || 'Fornitore'}</div>
+                    <div style="font-size:12px; color:#555; margin-bottom:6px;"><b>Önskat leveransdatum:</b> ${dateVal}</div>`;
+                if (currentNote) html += `<div style="font-size:12px; color:#1b5e20; margin-bottom:6px;"><b>Anteckning:</b> ${currentNote}</div>`;
+
                 groups[sId].forEach(p => { 
                     const sweUnit = window.translateUnitToSwedish(p.unit);
-                    waTxt += `• ${p.name}: *${p.orderQty} ${sweUnit}*\n`; 
+                    txt += `• ${p.name}: ${p.orderQty} ${sweUnit}\n`; 
+                    html += `<div style="font-size:13px; margin-bottom:2px;">• ${p.name}: <b>${p.orderQty} ${sweUnit}</b></div>`; 
                 });
-                waTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
 
-                // 2. TESTO PER EMAIL OUTLOOK (Iscrizioni chiare in MAIUSCOLO per massima leggibilità, senza asterischi letterali)
-                let mailTxt = `BESTÄLLNING MAGARI - ${locName.toUpperCase()}\n`;
-                mailTxt += `========================================\n`;
-                mailTxt += `👤 BESTÄLLARE: ${op}\n`;
-                mailTxt += `🚚 ÖNSKAT LEVERANSDATUM: ${dateVal}\n`;
-                if (supplierNote.trim()) mailTxt += `💬 ANTECKNING: ${supplierNote.trim().toUpperCase()}\n`;
-                mailTxt += `========================================\n\n`;
-                mailTxt += `PRODUKTER:\n`;
-                groups[sId].forEach(p => { 
-                    const sweUnit = window.translateUnitToSwedish(p.unit);
-                    mailTxt += `• ${p.name}: ${p.orderQty} ${sweUnit}\n`; 
-                });
-                mailTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
+                txt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
 
-                const wa = `https://wa.me/${(sup?.phone || '').replace(/[^0-9]/g,'')}?text=${encodeURIComponent(waTxt)}`;
+                const wa = `https://wa.me/${(sup?.phone || '').replace(/[^0-9]/g,'')}?text=${encodeURIComponent(txt)}`;
                 const mailSubject = `Ordine Magari - ${locName} - ${todayStr}`;
-                const mailto = `mailto:${supplierEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailTxt)}`;
+                const mailto = `mailto:${supplierEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(txt)}`;
 
-                let itemsListHtml = groups[sId].map(p => {
-                    const sweUnit = window.translateUnitToSwedish(p.unit);
-                    return `<div style="font-size:16px; font-weight:600; margin-bottom:4px; color:#1e293b;">• ${p.name}: <span style="color:var(--primary); font-weight:800;">${p.orderQty} ${sweUnit}</span></div>`;
-                }).join('');
+                html += `<div style="display:flex; flex-direction:column; gap:6px; margin-top:10px;">
+                    <a href="${wa}" target="_blank" style="background:var(--whatsapp); color:white; padding:8px 12px; text-align:center; border-radius:6px; text-decoration:none; font-weight:bold; font-size:13px;">💬 Invia via WhatsApp</a>
+                    <a href="${mailto}" target="_blank" style="background:#0288d1; color:white; padding:8px 12px; text-align:center; border-radius:6px; text-decoration:none; font-weight:bold; font-size:13px;">✉️ Invia via Email (${supplierEmail || 'No Email'})</a>
+                </div></div>`;
 
-                let supplierCardHtml = `
-                    <div style="background:#f9f9f9; padding:16px; border-radius:10px; margin-bottom:16px; border:1px solid #cbd5e1;">
-                        <div style="font-weight:800; color:var(--primary); font-size:18px; margin-bottom:8px;">🚚 ${sup?.name || 'Fornitore'}</div>
-                        <div style="font-size:15px; color:#333; margin-bottom:12px;"><b>Önskat leveransdatum:</b> <span style="color:var(--primary); font-weight:bold; font-size:16px;">${dateVal}</span></div>
-                        
-                        <!-- CAMPO NOTE PIÙ GRANDE -->
-                        <div style="margin-bottom:12px; background:#fff; padding:12px; border-radius:8px; border:1px solid #94a3b8;">
-                            <label style="font-weight:bold; font-size:14px; color:#334155; display:block; margin-bottom:6px;">💬 Note / Commento per ${sup?.name || 'Fornitore'} (Anteckning):</label>
-                            <textarea id="note-supplier-${sId}" class="form-control" rows="2" placeholder="Scrivi qui note specifiche..." style="font-size:15px; font-weight:bold; resize:vertical; padding:10px;" oninput="window.updateSupplierNote('${sId}', '${op}', '${dateVal}', this.value)">${supplierNote}</textarea>
-                        </div>
-
-                        <div style="margin-bottom:12px; background:#ffffff; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
-                            ${itemsListHtml}
-                        </div>
-
-                        <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-                            <a id="wa-link-${sId}" href="${wa}" target="_blank" style="background:var(--whatsapp); color:white; padding:12px 16px; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">💬 Invia via WhatsApp</a>
-                            <a id="mail-link-${sId}" href="${mailto}" target="_blank" style="background:#0288d1; color:white; padding:12px 16px; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">✉️ Invia via Email (${supplierEmail || 'No Email'})</a>
-                        </div>
-                    </div>`;
-
-                c.innerHTML += supplierCardHtml;
+                c.innerHTML += html;
             }
 
             c.innerHTML += `
-                <button onclick="confirmAndSaveOrderToHistory('${op}')" class="btn-save" style="width:100%; padding:14px; font-weight:bold; font-size:16px; margin-top:10px; background:#1b5e20;">
+                <button onclick="confirmAndSaveOrderToHistory('${op}')" class="btn-save" style="width:100%; padding:12px; font-weight:bold; margin-top:8px; background:#1b5e20;">
                     ✅ Conferma Ordine e Salva in Storico
                 </button>
             `;
         };
 
-        window.updateSupplierNote = function(sId, op, dateVal, noteText) {
-            window.supplierNotesMap[sId] = noteText;
-            const sup = window.suppliersData.find(s => String(s.id) === String(sId));
-            const supplierEmail = sup?.email || '';
-            const locName = window.activeLocation || 'Magari';
-            const todayStr = new Date().toLocaleDateString('it-IT');
-
-            const items = window.inventoryData.filter(i => String(i.supplierId) === String(sId) && (i.orderQty || 0) > 0);
-
-            // AGGIORNA DINAMICAMENTE ENTRAMBI I TESTI
-            let waTxt = `*BESTÄLLNING MAGARI - ${locName.toUpperCase()}*\n`;
-            waTxt += `👤 Beställare: ${op}\n`;
-            waTxt += `🚚 Önskat leveransdatum: *${dateVal}*\n`;
-            if (noteText.trim()) waTxt += `💬 Anteckning: *${noteText.trim()}*\n`;
-            waTxt += `\nProdukter:\n`;
-            items.forEach(p => { 
-                const sweUnit = window.translateUnitToSwedish(p.unit);
-                waTxt += `• ${p.name}: *${p.orderQty} ${sweUnit}*\n`; 
-            });
-            waTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
-
-            let mailTxt = `BESTÄLLNING MAGARI - ${locName.toUpperCase()}\n`;
-            mailTxt += `========================================\n`;
-            mailTxt += `👤 BESTÄLLARE: ${op}\n`;
-            mailTxt += `🚚 ÖNSKAT LEVERANSDATUM: ${dateVal}\n`;
-            if (noteText.trim()) mailTxt += `💬 ANTECKNING: ${noteText.trim().toUpperCase()}\n`;
-            mailTxt += `========================================\n\n`;
-            mailTxt += `PRODUKTER:\n`;
-            items.forEach(p => { 
-                const sweUnit = window.translateUnitToSwedish(p.unit);
-                mailTxt += `• ${p.name}: ${p.orderQty} ${sweUnit}\n`; 
-            });
-            mailTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
-
-            const wa = `https://wa.me/${(sup?.phone || '').replace(/[^0-9]/g,'')}?text=${encodeURIComponent(waTxt)}`;
-            const mailSubject = `Ordine Magari - ${locName} - ${todayStr}`;
-            const mailto = `mailto:${supplierEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailTxt)}`;
-
-            const waLinkEl = document.getElementById(`wa-link-${sId}`);
-            const mailLinkEl = document.getElementById(`mail-link-${sId}`);
-            if (waLinkEl) waLinkEl.href = wa;
-            if (mailLinkEl) mailLinkEl.href = mailto;
+        window.onNoteChangedInSummary = function(op, dateVal) {
+            const noteVal = document.getElementById('modal-order-note')?.value || '';
+            window.lastOrderNote = noteVal;
+            window.renderSummaryModalContent(op, dateVal, noteVal);
         };
 
         window.confirmAndSaveOrderToHistory = function(operator) {
@@ -918,13 +1045,13 @@
                     destination: window.activeLocation || 'Sede Non Specifica',
                     operatorName: operator,
                     supplierName: sup?.name || 'Fornitore',
-                    note: window.supplierNotesMap[sId] || '',
+                    note: window.lastOrderNote || '',
                     items: groups[sId].map(i => ({ name: i.name, qty: i.orderQty, unit: i.unit }))
                 });
             }
 
             window.inventoryData.forEach(i => i.orderQty = 0);
-            window.supplierNotesMap = {};
+            window.lastOrderNote = '';
             saveDataToCloud();
             refreshAllViews();
             closeSummaryModal();
@@ -1154,7 +1281,7 @@
             const email = document.getElementById('supp-email').value.trim();
 
             if (idVal) {
-                const sup = window.suppliersData.find(x => x.id === parseInt(idVal));
+                const sup = window.suppliersData.find(s => s.id === parseInt(idVal));
                 if (sup) { sup.name = name; sup.color = color; sup.phone = phone; sup.email = email; }
             } else {
                 const newSup = { id: Date.now(), name, color, phone, email };
@@ -1248,6 +1375,9 @@
             closeExportExcelModal();
         };
 
+        // ====================================================================
+        // SEZIONE 5: INIZIALIZZAZIONE & EVENT LISTENERS (JS)
+        // ====================================================================
         const tomorrow = new Date(Date.now() + 86400000);
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         const datePicker = document.getElementById('order-date-picker');
