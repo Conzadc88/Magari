@@ -1,11 +1,27 @@
 <!--
 ====================================================================
-[MAGARI APP - VERSION 3.6.0 - PRODUZIONE OFFICIAL]
-- Produzione ufficiale collegata al documento Firestore: "magazzino_db/dati".
-- Isolamento Giacenze Multi-Sede: Conteggi, firme operatori e data/ora
-  del controllo divise al 100% tra Vasastan e Östermalm.
-- Modulo Ricette & Food Cost con dosaggi precisi in Grammi (g) e Pezzi (pz).
-- Formattazione email pulita per Outlook e messaggi WhatsApp con asterischi native.
+[MAGARI APP - HISTORICAL CHANGELOG REGISTRY]
+- v3.7.3 (PRODUZIONE):
+  * Rilascio stabile su documento Firestore "magazzino_db/dati".
+  * Blocco PIN gestore obbligatorio su tutte le sezioni di gestione (default PIN: '1234').
+  * Export Excel completo di metadati (Data/Ora, Sede, Operatore, Tipo Report, Valore totale).
+  * Ripristinato sistema Preferiti (⭐): gestione in Magazzino (PIN) e filtro rapido in Ordini/Scorte.
+  * Conferma ordini indipendente per singolo fornitore con conservazione carrello residuale.
+  * Badge notifica rosso (🔴 N) nel menu Impostazioni per segnalazioni pendenti dallo staff.
+- v3.7.2-DEV:
+  * Gestione conferma ordini indipendente per singolo fornitore.
+  * Fix z-index finestra info (i) all'interno del riepilogo ordini.
+  * Badge notifica rosso nel menu Impostazioni.
+- v3.7.1-DEV: Popolamento automatico / manuale di Prodotti Demo nell'ambiente "dati_dev".
+- v3.7.0-DEV: Test isolato su Firestore DEV.
+- v3.6.0: Isolamento giacenze e firme per sede (Vasastan / Östermalm). Modulo Ricette & Food Cost.
+- v3.5.3: Riscrittura matematica Food Cost in Grammi e Costo Panetto dinamico.
+- v3.5.2: Master Inventory Daniele FG AB & Don Bibbo.
+- v3.5.1: Master Inventory Stellan Kramer, Jansson Fisk, Divinoil.
+- v3.5.0: Modulo Ricette & Calcolo Food Cost base.
+- v3.4.0: Registro Vendite & Scarico automatico magazzino.
+- v3.3.8: Versione stabile di riferimento.
+- v3.3.0: Gestione multi-sede (Vasastan / Östermalm).
 ====================================================================
 -->
 <!DOCTYPE html>
@@ -17,7 +33,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Magari">
-    <title>Magari v3.6.0 - Ordini & Scorte</title>
+    <title>Magari v3.7.3</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,8 +56,8 @@
         .menu-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
         .header-brand-text { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         .brand-title { font-family: 'Cinzel', 'Times New Roman', serif; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: 2px; line-height: 1; text-transform: uppercase; }
-        .brand-subtitle { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 8px; font-weight: 400; color: rgba(255, 255, 255, 0.9); letter-spacing: 1px; margin-top: 3px; text-transform: uppercase; }
-        .page-badge { font-size: 11px; background: rgba(255, 255, 255, 0.15); padding: 4px 8px; border-radius: 6px; font-weight: 500; }
+        .brand-subtitle { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 8px; font-weight: 700; color: #c8e6c9; letter-spacing: 1px; margin-top: 3px; text-transform: uppercase; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; }
+        .page-badge { font-size: 11px; background: rgba(0, 0, 0, 0.25); color: #fff; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
 
         .top-bar-container { padding: 12px 16px; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(5px); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
         .search-row { display: flex; gap: 8px; }
@@ -51,13 +67,19 @@
         .btn-excel { background-color: var(--excel-green); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; box-shadow: 0 2px 6px rgba(16, 124, 65, 0.3); }
         .reset-btn { background-color: #fff3f0; color: var(--danger); border: 1px solid var(--danger); padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; width: 100%; }
 
+        .info-btn { background: #e2e8f0; border: none; color: #475569; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .info-btn:hover { background: #cbd5e1; color: #1e293b; }
+
+        .star-toggle-btn { background: none; border: none; font-size: 20px; cursor: pointer; transition: transform 0.15s ease; padding: 2px 4px; }
+        .star-toggle-btn:active { transform: scale(1.3); }
+
         .location-active-banner { background: #e8f5e9; border-bottom: 1px solid #c8e6c9; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: bold; color: #2e7d32; }
 
         .view-section { display: none; flex-direction: column; flex: 1; padding-bottom: 20px; position: relative; }
         .view-section.active { display: flex; }
         #view-ordini { padding-bottom: 80px; }
 
-        .page-lock-banner { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(244, 246, 248, 0.98); backdrop-filter: blur(8px); z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        .page-lock-banner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(244, 246, 248, 0.98); backdrop-filter: blur(8px); z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
         .page-lock-box { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 100%; max-width: 320px; border: 1px solid var(--border); }
 
         .content-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
@@ -71,10 +93,10 @@
         .card-item.low-stock-alert { border: 2px solid var(--danger); background-color: #fff8f8; animation: pulseBorder 1.5s infinite; }
 
         .item-name-box { padding: 10px 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 4px; border-left-width: 4px; border-left-style: solid; }
-        .item-name { font-size: 18px; font-weight: 800; color: #111111; line-height: 1.25; display: flex; align-items: center; gap: 6px; }
+        .item-name { font-size: 18px; font-weight: 800; color: #111111; line-height: 1.25; display: flex; align-items: center; justify-content: space-between; width: 100%; }
         .item-subtext { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 
-        .stock-warning-badge { display: inline-block; font-size: 14px; font-weight: 800; padding: 4px 8px; border-radius: 6px; margin-top: 6px; line-height: 1.3; }
+        .stock-warning-badge { display: inline-flex; align-items: center; font-size: 13px; font-weight: 800; padding: 4px 8px; border-radius: 6px; margin-top: 6px; line-height: 1.3; }
         .stock-warning-badge.alert { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
         .stock-warning-badge.normal { background-color: #f1f8e9; color: #33691e; border: 1px solid #c5e1a5; }
 
@@ -88,7 +110,7 @@
         .unit-label { font-size: 13px; color: var(--text-secondary); font-weight: 700; min-width: 38px; flex-shrink: 0; }
 
         .stock-label-box { display: flex; flex-direction: column; margin-right: auto; line-height: 1.25; }
-        .stock-label-main { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+        .stock-label-main { font-size: 13px; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; }
         .stock-label-sub { font-size: 11px; font-weight: bold; margin-top: 2px; }
 
         .action-row-btn { display: flex; gap: 8px; margin-top: 6px; border-top: 1px solid #f0f0f0; padding-top: 8px; }
@@ -105,17 +127,26 @@
         .fc-stat-val { font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 2px; }
         .ingredient-item-row { display: flex; justify-content: space-between; font-size: 12px; color: #334155; padding: 4px 0; border-bottom: 1px dashed #f1f5f9; }
 
-        .drawer { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background-color: white; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease; z-index: 200; padding: 20px; }
+        .faq-item-box { background: white; border-radius: 8px; border: 1px solid var(--border); padding: 12px; margin-bottom: 10px; }
+        .faq-question { font-size: 14px; font-weight: 800; color: var(--primary); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .faq-answer { font-size: 13px; color: #334155; line-height: 1.4; }
+
+        .bug-report-card { background: white; border-radius: 8px; border: 1px solid var(--border); padding: 12px; margin-bottom: 10px; }
+
+        .drawer { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background-color: white; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease; z-index: 200; padding: 20px; overflow-y: auto; }
         .drawer.open { left: 0; }
-        .drawer-header { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); background-color: var(--primary); border-radius: 8px; padding: 16px 12px; }
+        .drawer-header { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); background-color: var(--primary); border-radius: 8px; padding: 16px 12px; }
         .drawer-menu { list-style: none; }
-        .drawer-menu li { padding: 14px 0; font-size: 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .drawer-menu li { padding: 12px 0; font-size: 14px; font-weight: 600; border-bottom: 1px solid #f0f0f0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
 
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 150; }
         .overlay.active { display: block; }
 
         .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 92%; max-width: 480px; max-height: 88vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.25); display: none; z-index: 210; }
         .modal.active { display: block; }
+        
+        #info-modal { z-index: 9999 !important; }
+
         .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
@@ -126,7 +157,7 @@
         .btn-save { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
         .btn-danger { background: var(--danger); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
 
-        .toast-notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #263238; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.3); z-index: 9999; display: none; transition: opacity 0.3s ease; text-align: center; max-width: 90%; border-left: 4px solid var(--warning); }
+        .toast-notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #263238; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.3); z-index: 99999; display: none; transition: opacity 0.3s ease; text-align: center; max-width: 90%; border-left: 4px solid var(--warning); }
         .toast-notification.show { display: block; }
 
         .sticky-checkout-container { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; padding: 10px 16px 14px 16px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border-top: 1px solid var(--border); box-shadow: 0 -4px 10px rgba(0,0,0,0.08); z-index: 90; transition: max-width 0.3s ease; }
@@ -140,11 +171,13 @@
         .report-table th, .report-table td { border: 1px solid #e0e0e0; padding: 6px 8px; text-align: left; }
         .report-table th { background-color: #fafafa; font-weight: bold; color: #444; }
 
+        .badge-notification { background: var(--danger); color: white; border-radius: 12px; font-size: 11px; font-weight: 800; padding: 2px 8px; display: inline-block; }
+
         @media screen and (min-width: 768px) {
             .app-container { max-width: 1200px; box-shadow: 0 0 30px rgba(0,0,0,0.08); }
             .sticky-checkout-container { max-width: 1200px; }
             .content-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
-            .history-card, .empty-placeholder, .settings-card, .recipe-card { grid-column: span 1; }
+            .history-card, .empty-placeholder, .settings-card, .recipe-card, .faq-item-box, .bug-report-card { grid-column: span 1; }
             .modal { max-width: 580px; }
         }
     </style>
@@ -153,11 +186,11 @@
 
     <div id="toast-notification" class="toast-notification"></div>
 
-    <div class="page-lock-banner" id="location-guard-banner" style="display: flex;">
+    <div class="page-lock-banner" id="location-guard-banner" style="display: flex; position: fixed; z-index: 1000;">
         <div class="page-lock-box" style="max-width: 340px;">
             <div style="font-size: 32px; margin-bottom: 8px;">📍</div>
             <h3 style="margin-bottom: 6px; color: var(--primary);">Seleziona la Sede</h3>
-            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">Per quale locale stai operando?</p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">Seleziona il locale in cui ti trovi per caricare le giacenze corrette.</p>
             <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
                 <button class="btn-save" style="padding: 12px; font-size: 14px; background-color: #043927;" onclick="setActiveLocation('Vasastan (Sankt Eriksgatan 110)')">📍 Vasastan<br><span style="font-size:10px; opacity:0.8;">Sankt Eriksgatan 110</span></button>
                 <button class="btn-save" style="padding: 12px; font-size: 14px; background-color: #1b5e20;" onclick="setActiveLocation('Östermalm (Styrmansgatan 52)')">📍 Östermalm<br><span style="font-size:10px; opacity:0.8;">Styrmansgatan 52</span></button>
@@ -170,18 +203,23 @@
 
         <div class="drawer" id="drawer">
             <div class="drawer-header">
-                <div class="brand-title" style="font-size: 26px;">MAGARI</div>
-                <div class="brand-subtitle" style="font-size: 9px; letter-spacing: 2px;">v3.6.0 Multi-Sede & Food Cost</div>
+                <div class="brand-title" style="font-size: 24px;">MAGARI</div>
+                <div class="brand-subtitle" style="font-size: 8px;">v3.7.3 PRODUZIONE</div>
             </div>
             <ul class="drawer-menu">
                 <li onclick="navigateTo('ordini')">🛒 Ordini</li>
                 <li onclick="navigateTo('scorte')">📦 Scorte (Giacenze)</li>
-                <li onclick="navigateTo('ricette')">🍕 Ricette & Food Cost <span id="lock-icon-ricette">🔓</span></li>
+                <li onclick="navigateTo('ricette')">🍕 Ricette & Food Cost <span id="lock-icon-ricette">🔒</span></li>
                 <li onclick="navigateTo('storico')">📜 Storico Ordini</li>
-                <li onclick="navigateTo('magazzino')">🛠️ Magazzino <span id="lock-icon-magazzino">🔓</span></li>
-                <li onclick="navigateTo('fornitori')">🚚 Fornitori <span id="lock-icon-fornitori">🔓</span></li>
-                <li onclick="navigateTo('sprechi')">📊 Report Consumi <span id="lock-icon-sprechi">🔓</span></li>
-                <li onclick="navigateTo('impostazioni')">⚙️ Impostazioni <span id="lock-icon-impostazioni">🔓</span></li>
+                <li onclick="navigateTo('magazzino')">🛠️ Magazzino <span id="lock-icon-magazzino">🔒</span></li>
+                <li onclick="navigateTo('fornitori')">🚚 Fornitori <span id="lock-icon-fornitori">🔒</span></li>
+                <li onclick="navigateTo('sprechi')">📊 Report Consumi <span id="lock-icon-sprechi">🔒</span></li>
+                <li onclick="navigateTo('faq')" style="color:#2563eb; font-weight:bold;">❓ Guida & FAQ</li>
+                <li onclick="navigateTo('bugreport')" style="color:#d97706; font-weight:bold;">🐛 Segnala Bug & Feedback</li>
+                <li onclick="navigateTo('impostazioni')">
+                    <span>⚙️ Impostazioni <span id="lock-icon-impostazioni">🔒</span></span>
+                    <span id="bug-badge-drawer" class="badge-notification" style="display:none;">🔴 0</span>
+                </li>
             </ul>
         </div>
 
@@ -189,7 +227,7 @@
             <button class="menu-btn" onclick="toggleMenu()">☰</button>
             <div class="header-brand-text">
                 <div class="brand-title">MAGARI</div>
-                <div class="brand-subtitle">v3.6.0 Multi-Sede & Food Cost</div>
+                <div class="brand-subtitle">v3.7.3 PRODUZIONE</div>
             </div>
             <div class="page-badge" id="page-title">Ordini</div>
         </div>
@@ -198,17 +236,27 @@
             <span id="active-location-text">📍 Sede: Non selezionata</span>
             <button onclick="promptChangeLocation()" style="background: white; border: 1px solid #2e7d32; color: #2e7d32; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">Cambia Sede</button>
         </div>
-        <!-- 1. ORDINI -->
+
+
+
+
+
+<!-- 1. ORDINI -->
         <div id="view-ordini" class="view-section active">
             <div class="top-bar-container">
-                <input type="text" id="order-operator-name" class="operator-input" placeholder="👤 Nome Operatore (Chi ordina?)" required>
+                <div style="display:flex; align-items:center;">
+                    <input type="text" id="order-operator-name" class="operator-input" placeholder="👤 Nome Operatore (Chi ordina?)" required>
+                    <button class="info-btn" onclick="showInfoModal('Firma Operatore Ordine', 'Inserisci il tuo nome prima di procedere. La firma verrà salvata insieme all\'ordine nello storico e nella notifica al fornitore.')">ⓘ</button>
+                </div>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">🚚 Consegna Desiderata:</label>
                     <input type="date" id="order-date-picker" class="date-picker">
+                    <button class="info-btn" onclick="showInfoModal('Data Consegna Desiderata', 'Seleziona la data in cui il fornitore deve consegnare la merce. Non è possibile selezionare oggi o date passate.')">ⓘ</button>
                 </div>
                 <div style="display: flex; gap: 8px;">
                     <select id="filter-order-category" class="filter-select" onchange="filterOrderItems()">
                         <option value="">📂 Tutte le Categorie</option>
+                        <option value="FAVORITES" style="font-weight:bold; color:#b45309;">⭐ Solo Preferiti</option>
                         <option value="Latticini">🧀 Latticini</option>
                         <option value="Farine & Secco">🌾 Farine & Secco</option>
                         <option value="Conserve & Pomodoro">🍅 Conserve & Pomodoro</option>
@@ -240,12 +288,19 @@
         <!-- 2. SCORTE -->
         <div id="view-scorte" class="view-section">
             <div class="top-bar-container">
-                <input type="text" id="stock-operator-name" class="operator-input" placeholder="✍️ Nome / Firma Operatore Giacenze" required>
-                <button class="btn-excel" onclick="promptExportExcelModal()">📊 Export Inventory (English Excel)</button>
+                <div style="display:flex; align-items:center;">
+                    <input type="text" id="stock-operator-name" class="operator-input" placeholder="✍️ Nome / Firma Operatore Giacenze" required>
+                    <button class="info-btn" onclick="showInfoModal('Firma Controllo Scorte', 'Inserisci il tuo nome per registrare chi ha eseguito il controllo scorte.')">ⓘ</button>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="btn-excel" onclick="promptExportExcelModal()">📊 Export Inventory (English Excel)</button>
+                    <button class="info-btn" onclick="showInfoModal('Export Inventario Excel', 'Genera un file Excel formattato con Data, Sede, Operatore e Valore Economico di Magazzino.')">ⓘ</button>
+                </div>
                 <button class="reset-btn" onclick="requestPinAction('reset_stock_quantities')">🔒 🔄 Azzera Giacenze Sede Attiva</button>
                 <div style="display: flex; gap: 8px;">
                     <select id="filter-stock-category" class="filter-select" onchange="filterStockItems()">
                         <option value="">📂 Tutte le Categorie</option>
+                        <option value="FAVORITES" style="font-weight:bold; color:#b45309;">⭐ Solo Preferiti</option>
                         <option value="Latticini">🧀 Latticini</option>
                         <option value="Farine & Secco">🌾 Farine & Secco</option>
                         <option value="Conserve & Pomodoro">🍅 Conserve & Pomodoro</option>
@@ -275,12 +330,12 @@
 
         <!-- 3. RICETTE & FOOD COST -->
         <div id="view-ricette" class="view-section">
-            <div class="page-lock-banner" id="lock-banner-ricette" style="display: none;">
-                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Ricette Bloccate</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-ricette" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('ricette')">Conferma</button></div></div>
+            <div class="page-lock-banner" id="lock-banner-ricette">
+                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Ricette Bloccate</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN gestore (Default: 1234)</p><input type="password" id="pin-input-ricette" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('ricette')">Conferma</button></div></div>
             </div>
             <div class="top-bar-container">
                 <div style="background:#e8f5e9; border:1px solid #a5d6a7; border-radius:8px; padding:8px 12px; font-size:12px; color:#1b5e20; display:flex; justify-content:space-between; align-items:center;">
-                    <span>🍞 <b>Costo Panetto (285g):</b> Impasto 75% H2O</span>
+                    <span>🍞 <b>Costo Panetto (285g):</b> Impasto 75% H2O <button class="info-btn" onclick="showInfoModal('Costo Panetto Impasto', 'Il costo del panetto da 285g viene calcolato in automatico in base alle farine in magazzino.')">ⓘ</button></span>
                     <span id="display-panetto-cost-badge" style="font-weight:bold; font-size:13px; background:#2e7d32; color:white; padding:2px 8px; border-radius:4px;">3.52 SEK</span>
                 </div>
                 <div class="search-row">
@@ -306,13 +361,17 @@
 
         <!-- 5. MAGAZZINO -->
         <div id="view-magazzino" class="view-section">
-            <div class="page-lock-banner" id="lock-banner-magazzino" style="display: none;">
-                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Magazzino Bloccato</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-magazzino" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('magazzino')">Conferma</button></div></div>
+            <div class="page-lock-banner" id="lock-banner-magazzino">
+                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Magazzino Bloccato</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN gestore (Default: 1234)</p><input type="password" id="pin-input-magazzino" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('magazzino')">Conferma</button></div></div>
             </div>
             <div class="top-bar-container">
+                <div style="font-size:11px; background:#fff3cd; color:#856404; padding:6px 10px; border-radius:6px; font-weight:600;">
+                    ⭐ <b>Gestione Preferiti:</b> Clicca sulla stellina accanto ai prodotti per contrassegnare gli ingredienti principali per lo staff.
+                </div>
                 <div style="display: flex; gap: 8px;">
                     <select id="filter-inventory-category" class="filter-select" onchange="filterItems()">
                         <option value="">📂 Tutte le Categorie</option>
+                        <option value="FAVORITES" style="font-weight:bold; color:#b45309;">⭐ Solo Preferiti</option>
                         <option value="Latticini">🧀 Latticini</option>
                         <option value="Farine & Secco">🌾 Farine & Secco</option>
                         <option value="Conserve & Pomodoro">🍅 Conserve & Pomodoro</option>
@@ -333,8 +392,8 @@
 
         <!-- 6. FORNITORI -->
         <div id="view-fornitori" class="view-section">
-            <div class="page-lock-banner" id="lock-banner-fornitori" style="display: none;">
-                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Fornitori Bloccati</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-fornitori" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('fornitori')">Conferma</button></div></div>
+            <div class="page-lock-banner" id="lock-banner-fornitori">
+                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Fornitori Bloccati</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN gestore (Default: 1234)</p><input type="password" id="pin-input-fornitori" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('fornitori')">Conferma</button></div></div>
             </div>
             <div class="top-bar-container"><div class="search-row"><input type="text" id="search-supplier-input" class="search-input" placeholder="Cerca fornitore..." oninput="filterSuppliers()"><button class="add-btn" onclick="openAddSupplierModal()">+ Fornitore</button></div></div>
             <div class="content-list" id="suppliers-list"></div>
@@ -342,8 +401,8 @@
 
         <!-- 7. REPORT CONSUMI -->
         <div id="view-sprechi" class="view-section">
-            <div class="page-lock-banner" id="lock-banner-sprechi" style="display: none;">
-                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Report Bloccati</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-sprechi" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('sprechi')">Conferma</button></div></div>
+            <div class="page-lock-banner" id="lock-banner-sprechi">
+                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Report Bloccati</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN gestore (Default: 1234)</p><input type="password" id="pin-input-sprechi" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('sprechi')">Conferma</button></div></div>
             </div>
             <div class="top-bar-container">
                 <div class="form-group"><label>Periodo Report:</label><select id="report-period-type" class="form-control" onchange="toggleReportPeriodInputs()"><option value="total">Totale Storico Ordini</option><option value="month">Mese Specifico</option><option value="stock">Giacenze Attuali</option></select></div>
@@ -359,24 +418,76 @@
             </div>
         </div>
 
-        <!-- 8. IMPOSTAZIONI -->
+        <!-- 8. GUIDA & FAQ -->
+        <div id="view-faq" class="view-section">
+            <div class="top-bar-container">
+                <div style="font-size:16px; font-weight:800; color:var(--primary);">❓ Guida Rapida & Domande Frequenti</div>
+                <div style="font-size:12px; color:#555;">Istruzioni operative per la gestione in pizzeria.</div>
+            </div>
+            <div class="content-list">
+                <div class="faq-item-box">
+                    <div class="faq-question">🛒 Come inviare un ordine ai fornitori?</div>
+                    <div class="faq-answer">1. Seleziona la Sede in cui ti trovi.<br>2. Inserisci il Nome Operatore e la Data di Consegna.<br>3. Seleziona le quantità e premi <b>📋 Genera Riepilogo Ordine</b>.<br>4. Invia via WhatsApp o Email.<br>5. Premi <b>✅ Conferma</b> sul singolo fornitore inviato per rimuoverlo dal carrello.</div>
+                </div>
+                <div class="faq-item-box">
+                    <div class="faq-question">⭐ Come gestire i Prodotti Preferiti?</div>
+                    <div class="faq-answer">Entra nel menu <b>Magazzino</b> con il PIN gestore, individua il prodotto e clicca sulla stellina ⭐. Negli Ordini e Scorte potrai poi filtrare la lista tramite <b>⭐ Solo Preferiti</b>.</div>
+                </div>
+                <div class="faq-item-box">
+                    <div class="faq-question">🔒 PIN di Sicurezza Gestore</div>
+                    <div class="faq-answer">Se non hai ancora personalizzato il PIN in Impostazioni, il PIN predefinito è <b>1234</b>.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 9. SEGNALA BUG & FEEDBACK -->
+        <div id="view-bugreport" class="view-section">
+            <div class="top-bar-container">
+                <div style="font-size:16px; font-weight:800; color:#d97706;">🐛 Segnala Bug o Invia Feedback</div>
+                <div style="font-size:12px; color:#555;">Segnala errori di sistema o dati non aggiornati allo staff direttivo.</div>
+            </div>
+            <div style="padding:16px;">
+                <div class="form-group"><label>Sede Rilevata</label><input type="text" id="bug-location-display" class="form-control" readonly style="background:#f1f5f9; font-weight:bold;"></div>
+                <div class="form-group"><label>Il tuo Nome / Firma</label><input type="text" id="bug-operator-input" class="form-control" placeholder="es. Marco, Giuseppe..."></div>
+                <div class="form-group"><label>Tipo di Segnalazione</label><select id="bug-type-select" class="form-control"><option value="🐛 Errore Tecnico / Bug App">🐛 Errore Tecnico / Bug App</option><option value="🧀 Errore Dati (Prezzo/Grammi/Fornitore)">🧀 Errore Dati (Prezzo/Grammi/Fornitore)</option><option value="💡 Suggerimento / Idea">💡 Suggerimento / Idea</option></select></div>
+                <div class="form-group"><label>Descrizione del Problema o Proposta</label><textarea id="bug-desc-input" class="form-control" rows="4" placeholder="Spiega cosa è successo..."></textarea></div>
+                <button class="btn-save" onclick="submitBugReport()" style="width:100%; padding:12px; font-weight:bold; background:#d97706;">🚀 Invia Segnalazione</button>
+            </div>
+        </div>
+
+        <!-- 10. IMPOSTAZIONI -->
         <div id="view-impostazioni" class="view-section">
-            <div class="page-lock-banner" id="lock-banner-impostazioni" style="display: none;">
-                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Impostazioni Bloccate</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN di Sicurezza</p><input type="password" id="pin-input-impostazioni" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('impostazioni')">Conferma</button></div></div>
+            <div class="page-lock-banner" id="lock-banner-impostazioni">
+                <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Impostazioni Bloccate</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN gestore (Default: 1234)</p><input type="password" id="pin-input-impostazioni" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('impostazioni')">Conferma</button></div></div>
             </div>
             <div class="settings-card">
                 <h3>⚙️ Sicurezza & Gestione</h3>
-                <div class="form-group" style="margin-top:8px;"><label>Stato PIN</label><div id="pin-status-label" style="font-weight: bold; font-size: 13px; color: #e53935;">❌ PIN Non Impostato</div></div>
-                <div style="display: flex; gap: 8px; margin-bottom:12px;"><button class="btn-save" onclick="openSetPinModal()">Imposta / Modifica PIN</button><button class="btn-danger" id="btn-remove-pin" onclick="requestPinAction('remove_pin')" style="display:none;">Rimuovi PIN</button></div>
+                <div class="form-group" style="margin-top:8px;">
+                    <label>Stato PIN Sicurezza Gestore</label>
+                    <div id="pin-status-label" style="font-weight: bold; font-size: 13px;"></div>
+                </div>
+                <div style="display: flex; gap: 8px; margin-bottom:12px;"><button class="btn-save" onclick="openSetPinModal()">Imposta / Modifica PIN</button><button class="btn-danger" id="btn-remove-pin" onclick="requestPinAction('remove_pin')" style="display:none;">Rimuovi PIN Custom</button></div>
+                
+                <hr style="border:0; border-top:1px solid #eee; margin: 8px 0;">
+                
+                <h4 style="font-size:14px; color:#d97706; margin-top:4px;">🐛 Gestione Segnalazioni Staff (Bug & Feedback)</h4>
+                <div id="admin-bug-reports-container" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; margin-top:6px; background:#fafafa; padding:8px; border-radius:6px; border:1px solid #e2e8f0;"></div>
+
                 <hr style="border:0; border-top:1px solid #eee; margin: 8px 0;">
                 <button class="reset-btn" onclick="requestPinAction('reset_suppliers')">🔒 🔄 Ripristina Fornitori di Default</button>
-                <button class="reset-btn" onclick="requestPinAction('reset_inventory')">🔒 🔄 Ripristina Prodotto Master (Magazzino)</button>
-                <button class="btn-danger" onclick="requestPinAction('reset_all_data')" style="width:100%; margin-top: 6px;">🔒 ⚠️ RESET TOTALE COMPLETO</button>
+                <button class="reset-btn" onclick="requestPinAction('reset_inventory')">🔒 🔄 Ripristina Anagrafica Master</button>
+                <button class="btn-danger" onclick="requestPinAction('reset_all_data')" style="width:100%; margin-top: 6px;">🔒 ⚠️ RESET TOTALE DATABASE</button>
             </div>
         </div>
     </div>
 
     <!-- MODALI -->
+    <div class="modal" id="info-modal">
+        <div class="modal-title" id="info-modal-title" style="color:var(--primary); font-size:18px;">ℹ️ Informazione</div>
+        <div id="info-modal-body" style="font-size:14px; color:#334155; line-height:1.5; margin-bottom:16px;"></div>
+        <div class="modal-actions"><button class="btn-save" onclick="closeInfoModal()">Capito</button></div>
+    </div>
+
     <div class="modal" id="recipe-modal">
         <div class="modal-title" id="recipe-modal-title">🍕 Scheda Ricetta & Food Cost</div>
         <input type="hidden" id="edit-recipe-id">
@@ -395,7 +506,7 @@
         
         <div class="form-group" style="position:relative; margin-bottom:12px;">
             <label style="font-weight:bold; font-size:12px; color:var(--primary);">🔍 Cerca e Aggiungi Ingrediente da Magazzino:</label>
-            <input type="text" id="recipe-search-ingredient-input" class="form-control" placeholder="Digita per cercare (es. bufala, pelati, rucola...)" oninput="handleRecipeIngredientSearch(this.value)" autocomplete="off">
+            <input type="text" id="recipe-search-ingredient-input" class="form-control" placeholder="Digita per cercare..." oninput="handleRecipeIngredientSearch(this.value)" autocomplete="off">
             <div id="recipe-search-results" style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid var(--border); border-radius:6px; max-height:180px; overflow-y:auto; z-index:300; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
         </div>
 
@@ -410,23 +521,24 @@
 
     <div class="modal" id="export-excel-modal">
         <div class="modal-title">📊 Export Inventory (English Excel)</div>
-        <div class="form-group"><label>Tipologia:</label><select id="export-type-select" class="form-control"><option value="food">🍕 Food & Supplies</option><option value="alcohol">🍷 Alcohol & Beverages</option><option value="all">📦 Full Inventory</option></select></div>
-        <div class="form-group"><label>Email:</label><input type="email" id="export-target-email" class="form-control" placeholder="info@decary.se"></div>
-        <div class="form-group"><label>Operatore:</label><input type="text" id="export-operator-name" class="form-control"></div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="closeExportExcelModal()">Annulla</button><button class="btn-save" style="background-color: var(--excel-green);" onclick="generateAndExportExcel()">Download</button></div>
+        <div class="form-group"><label>Tipologia Report:</label><select id="export-type-select" class="form-control"><option value="food">🍕 Food & Supplies</option><option value="alcohol">🍷 Alcohol & Beverages</option><option value="all">📦 Full Inventory</option></select></div>
+        <div class="form-group"><label>Nome Operatore (Chi genera il report?):</label><input type="text" id="export-operator-name" class="form-control" placeholder="es. Nicolas"></div>
+        <div class="form-group"><label>Invia Copia Email A (Opzionale):</label><input type="email" id="export-target-email" class="form-control" placeholder="info@decary.se"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="closeExportExcelModal()">Annulla</button><button class="btn-save" style="background-color: var(--excel-green);" onclick="generateAndExportExcel()">Download Excel</button></div>
     </div>
 
     <div class="modal" id="pin-modal">
-        <div class="modal-title">🔒 Inserisci PIN di Sicurezza</div>
+        <div class="modal-title">🔒 Autenticazione PIN Gestore</div>
+        <div style="font-size:12px; color:#666; margin-bottom:8px;">Inserisci il PIN gestore per autorizzare l'operazione (Default: 1234)</div>
         <div class="form-group"><input type="password" id="input-verify-pin" class="form-control pin-input" maxlength="4" placeholder="••••"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="closePinModal()">Annulla</button><button class="btn-save" onclick="verifyPin()">Conferma</button></div>
     </div>
 
     <div class="modal" id="set-pin-modal">
-        <div class="modal-title">Imposta PIN</div>
+        <div class="modal-title">🔑 Imposta / Modifica PIN</div>
         <div class="form-group" id="old-pin-group" style="display:none;"><label>PIN Attuale</label><input type="password" id="input-old-pin" class="form-control pin-input" maxlength="4" placeholder="••••"></div>
         <div class="form-group"><label>Nuovo PIN (4 cifre)</label><input type="password" id="input-new-pin" class="form-control pin-input" maxlength="4" placeholder="••••"></div>
-        <div class="form-group"><label>Conferma PIN</label><input type="password" id="input-confirm-pin" class="form-control pin-input" maxlength="4" placeholder="••••"></div>
+        <div class="form-group"><label>Conferma Nuovo PIN</label><input type="password" id="input-confirm-pin" class="form-control pin-input" maxlength="4" placeholder="••••"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="closeSetPinModal()">Annulla</button><button class="btn-save" onclick="saveNewPin()">Salva</button></div>
     </div>
 
@@ -462,21 +574,28 @@
         <div class="form-group"><label>Email</label><input type="email" id="supp-email" class="form-control"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="closeAddSupplierModal()">Annulla</button><button class="btn-save" onclick="saveSupplier()">Salva</button></div>
     </div>
-    <!-- LOGICA JAVASCRIPT APPLICATIVA -->
+
+
+
+
+
+<!-- LOGICA JAVASCRIPT APPLICATIVA (v3.7.3 PRODUZIONE) -->
     <script type="module">
         /*
         ====================================================================
-        [MAGARI APP - CHANGELOG HISTORICAL REGISTRY]
-        - v3.6.0 (PRODUZIONE):
-          * Modifica Firestore: Puntamento ufficiale al documento "magazzino_db/dati".
-          * Isolamento totale giacenze, firme operatori e date dell'ultimo controllo tra Vasastan e Östermalm.
-          * Calcolo Food Cost preciso in Grammi (g) e Pezzi (pz) per piatto/pizza.
-          * Formattazione ottimizzata per Outlook e WhatsApp.
-        - v3.5.2: Master Inventory Daniele FG AB & Don Bibbo.
-        - v3.5.1: Master Inventory Stellan Kramer, Jansson Fisk, Divinoil.
-        - v3.5.0: Modulo Ricette & Calcolo Food Cost base.
-        - v3.4.0: Registro Vendite & Scarico automatico magazzino.
-        - v3.3.0: Gestione multi-sede (Vasastan / Östermalm).
+        [MAGARI APP - HISTORICAL CHANGELOG REGISTRY]
+        - v3.7.3 (PRODUZIONE):
+          * Target Documento Firestore PRODUZIONE: "magazzino_db/dati".
+          * Blocco PIN gestore obbligatorio per tutte le sezioni protette (default: '1234').
+          * Export Excel completo di metadati (Data/Ora, Sede, Operatore, Tipo Report).
+          * Ripristinato sistema Preferiti (⭐): gestione in Magazzino (PIN) e filtro rapido in Ordini/Scorte.
+        - v3.7.2-DEV:
+          * Gestione conferma ordini indipendente per singolo fornitore.
+          * Fix z-index finestra info (i) all'interno del riepilogo ordini.
+          * Badge notifica rosso nel menu Impostazioni.
+        - v3.7.1-DEV: Popolamento automatico / manuale di Prodotti Demo nell'ambiente "dati_dev".
+        - v3.7.0-DEV: Test isolato su Firestore DEV.
+        - v3.6.0: Isolamento giacenze e firme per sede (Vasastan / Östermalm). Modulo Ricette & Food Cost.
         ====================================================================
         */
 
@@ -495,7 +614,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // PRODUZIONE UFFICIALE: DOCUMENTO "dati"
+        // DOCUMENTO DI PRODUZIONE ONLINE: "dati"
         const appDocRef = doc(db, "magazzino_db", "dati");
 
         window.appPin = null; 
@@ -503,9 +622,10 @@
         window.activeLocation = null;
         window.supplierNotesMap = {};
 
-        // ====================================================================
-        // HELPER ISOLAMENTO SEDE (VASASTAN vs ÖSTERMALM)
-        // ====================================================================
+        window.getEffectivePin = function() {
+            return (window.appPin && window.appPin !== "null" && String(window.appPin).trim() !== "") ? String(window.appPin) : "1234";
+        };
+
         window.getLocationKey = function() {
             return (window.activeLocation && window.activeLocation.includes('Östermalm')) ? 'ostermalm' : 'vasastan';
         };
@@ -548,7 +668,6 @@
             }
         };
 
-        // FORNITORI DEFAULT
         window.defaultSuppliers = [
             { id: 1700000001, name: "Paolo's Tiramisu", phone: "0764211121", email: "paolo@tiramisusthlm.se", color: "#f57c00" },
             { id: 1700000002, name: "Divinoil Antica Bottega", phone: "0708223715", email: "info@divinoil.com", color: "#5d4037" },
@@ -567,6 +686,7 @@
         window.inventoryData = [];
         window.recipesData = [];
         window.orderHistoryData = [];
+        window.bugReportsData = [];
 
         onSnapshot(appDocRef, (snapshot) => {
             if (snapshot.exists()) {
@@ -575,6 +695,7 @@
                 if (data.inventory) window.inventoryData = data.inventory;
                 if (data.recipes) window.recipesData = data.recipes;
                 if (data.history) window.orderHistoryData = data.history;
+                if (data.bugReports) window.bugReportsData = data.bugReports;
                 
                 if (data.pin !== undefined && data.pin !== null && data.pin !== "null" && String(data.pin).trim() !== "") {
                     window.appPin = String(data.pin);
@@ -584,8 +705,22 @@
             }
             window.populateAllSupplierFilters();
             window.updatePinUI();
+            window.updateBugBadge();
             window.refreshAllViews();
         });
+
+        window.updateBugBadge = function() {
+            const pendingCount = window.bugReportsData.filter(r => r.status && r.status.includes('In lavorazione')).length;
+            const badgeEl = document.getElementById('bug-badge-drawer');
+            if (badgeEl) {
+                if (pendingCount > 0) {
+                    badgeEl.innerText = `🔴 ${pendingCount}`;
+                    badgeEl.style.display = 'inline-block';
+                } else {
+                    badgeEl.style.display = 'none';
+                }
+            }
+        };
 
         window.saveDataToCloud = async function() {
             try {
@@ -594,6 +729,7 @@
                     suppliers: window.suppliersData,
                     recipes: window.recipesData,
                     history: window.orderHistoryData,
+                    bugReports: window.bugReportsData,
                     pin: window.appPin
                 }, { merge: true });
             } catch (e) { console.error(e); }
@@ -605,6 +741,94 @@
                 toast.innerText = msg;
                 toast.classList.add('show');
                 setTimeout(() => { toast.classList.remove('show'); }, 3500);
+            }
+        };
+
+        window.showInfoModal = function(title, text) {
+            document.getElementById('info-modal-title').innerText = `ℹ️ ${title}`;
+            document.getElementById('info-modal-body').innerText = text;
+            document.getElementById('info-modal').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        };
+
+        window.closeInfoModal = function() {
+            document.getElementById('info-modal').classList.remove('active');
+            if (!document.getElementById('summary-modal').classList.contains('active')) {
+                document.getElementById('overlay').classList.remove('active');
+            }
+        };
+
+        window.toggleFavorite = function(itemId) {
+            const item = window.inventoryData.find(x => x.id === itemId);
+            if (item) {
+                item.isFavorite = !item.isFavorite;
+                saveDataToCloud();
+                refreshAllViews();
+                window.showAlert(item.isFavorite ? `⭐ ${item.name} aggiunto ai Preferiti!` : `☆ ${item.name} rimosso dai Preferiti.`);
+            }
+        };
+
+        window.submitBugReport = function() {
+            const op = document.getElementById('bug-operator-input').value.trim();
+            if (!op) return window.showAlert("✍️ Inserisci il tuo nome prima di inviare.");
+            const desc = document.getElementById('bug-desc-input').value.trim();
+            if (!desc) return window.showAlert("⚠️ Scrivi una breve descrizione del problema.");
+            
+            const type = document.getElementById('bug-type-select').value;
+            const loc = window.activeLocation || 'Sede Non Specifica';
+            const nowStr = new Date().toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            window.bugReportsData.unshift({
+                id: Date.now(), timestamp: nowStr, location: loc, operator: op, type, description: desc, status: '🟡 In lavorazione'
+            });
+            saveDataToCloud(); updateBugBadge();
+            document.getElementById('bug-desc-input').value = '';
+            window.showAlert("🚀 Segnalazione inviata con successo!");
+        };
+
+        window.renderBugReportsInSettings = function() {
+            const container = document.getElementById('admin-bug-reports-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (window.bugReportsData.length === 0) {
+                container.innerHTML = '<div style="font-size:12px; color:#888; text-align:center; padding:10px;">Nessuna segnalazione inviata dallo staff.</div>';
+                return;
+            }
+
+            window.bugReportsData.forEach((rep) => {
+                const statusColor = rep.status.includes('Risolto') ? '#2e7d32' : '#d97706';
+                container.innerHTML += `
+                    <div class="bug-report-card" style="border-left:4px solid ${statusColor};">
+                        <div style="font-size:11px; color:#666; display:flex; justify-content:space-between;">
+                            <span>🕒 ${rep.timestamp}</span>
+                            <span>📍 ${rep.location}</span>
+                        </div>
+                        <div style="font-weight:bold; font-size:13px; margin:4px 0; color:#1e293b;">${rep.type} <span style="font-weight:normal; font-size:11px; color:#555;">(da ${rep.operator})</span></div>
+                        <div style="font-size:12px; color:#334155; margin-bottom:6px; background:#fff; padding:6px; border-radius:4px; border:1px solid #eee;">${rep.description}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:11px; font-weight:bold; color:${statusColor};">${rep.status}</span>
+                            <div style="display:flex; gap:4px;">
+                                <button class="btn-action-edit" onclick="toggleReportStatus(${rep.id})">🔄 Stato</button>
+                                <button class="btn-action-del" onclick="deleteReport(${rep.id})">🗑️</button>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        };
+
+        window.toggleReportStatus = function(id) {
+            const rep = window.bugReportsData.find(x => x.id === id);
+            if (rep) {
+                rep.status = rep.status.includes('In lavorazione') ? '🟢 Risolto' : '🟡 In lavorazione';
+                saveDataToCloud(); updateBugBadge(); renderBugReportsInSettings();
+            }
+        };
+
+        window.deleteReport = function(id) {
+            if (confirm("Eliminare questa segnalazione?")) {
+                window.bugReportsData = window.bugReportsData.filter(x => x.id !== id);
+                saveDataToCloud(); updateBugBadge(); renderBugReportsInSettings();
             }
         };
 
@@ -656,6 +880,8 @@
             document.getElementById('location-guard-banner').style.display = 'none';
             document.getElementById('active-location-text').innerText = `📍 Sede: ${loc}`;
             document.getElementById('active-location-banner').style.display = 'flex';
+            const bugLocEl = document.getElementById('bug-location-display');
+            if (bugLocEl) bugLocEl.value = loc;
             window.refreshAllViews();
         };
 
@@ -666,47 +892,42 @@
         window.navigateTo = function(sec) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
             document.getElementById(`view-${sec}`).classList.add('active');
-            const titles = { 'ordini': 'Ordini', 'scorte': 'Scorte', 'ricette': 'Ricette & Food Cost', 'storico': 'Storico', 'magazzino': 'Magazzino', 'fornitori': 'Fornitori', 'sprechi': 'Report Consumi', 'impostazioni': 'Impostazioni' };
+            const titles = { 'ordini': 'Ordini', 'scorte': 'Scorte', 'ricette': 'Ricette & Food Cost', 'storico': 'Storico', 'magazzino': 'Magazzino', 'fornitori': 'Fornitori', 'sprechi': 'Report Consumi', 'faq': 'Guida & FAQ', 'bugreport': 'Segnala Bug', 'impostazioni': 'Impostazioni' };
             document.getElementById('page-title').innerText = titles[sec] || 'Magari';
             window.closeAll();
 
+            if (sec === 'impostazioni') renderBugReportsInSettings();
+
             ['magazzino', 'fornitori', 'ricette', 'sprechi', 'impostazioni'].forEach(s => {
+                const banner = document.getElementById(`lock-banner-${s}`);
+                if (banner) { banner.style.display = 'flex'; }
                 const pInp = document.getElementById(`pin-input-${s}`);
                 if (pInp) pInp.value = '';
-                const banner = document.getElementById(`lock-banner-${s}`);
-                if (banner) {
-                    if (window.appPin && window.appPin !== "null") { banner.style.display = 'flex'; } 
-                    else { banner.style.display = 'none'; }
-                }
             });
         };
 
         window.verifySectionPin = function(sec) {
-            if (!window.appPin || window.appPin === "null") {
-                const banner = document.getElementById(`lock-banner-${sec}`);
-                if (banner) banner.style.display = 'none';
-                return;
-            }
             const val = document.getElementById(`pin-input-${sec}`).value;
-            if (String(val) === String(window.appPin)) {
+            const targetPin = window.getEffectivePin();
+            if (String(val) === String(targetPin)) {
                 const banner = document.getElementById(`lock-banner-${sec}`);
                 if (banner) banner.style.display = 'none';
+                if (sec === 'impostazioni') renderBugReportsInSettings();
+                window.showAlert("🔓 Accesso autorizzato!");
             } else { window.showAlert("❌ PIN Errato!"); }
         };
 
         window.requestPinAction = function(type, extraData = null) {
-            if (!window.appPin || window.appPin === "null") {
-                executeProtectedAction(type, extraData);
-            } else {
-                window.pendingPinAction = { type, extraData };
-                document.getElementById('input-verify-pin').value = '';
-                document.getElementById('pin-modal').classList.add('active');
-                document.getElementById('overlay').classList.add('active');
-            }
+            window.pendingPinAction = { type, extraData };
+            document.getElementById('input-verify-pin').value = '';
+            document.getElementById('pin-modal').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
         };
 
         window.verifyPin = function() {
-            if (!window.appPin || window.appPin === "null" || String(document.getElementById('input-verify-pin').value) === String(window.appPin)) {
+            const val = document.getElementById('input-verify-pin').value;
+            const targetPin = window.getEffectivePin();
+            if (String(val) === String(targetPin)) {
                 const actionToRun = window.pendingPinAction;
                 closePinModal();
                 if (actionToRun) executeProtectedAction(actionToRun.type, actionToRun.extraData);
@@ -723,68 +944,58 @@
             if (type === 'reset_stock_quantities') {
                 const key = window.getLocationKey();
                 const locLabel = key === 'ostermalm' ? 'Östermalm' : 'Vasastan';
-                
                 if (confirm(`Azzerare giacenze per la sede attiva (${locLabel})?`)) {
                     window.inventoryData.forEach(i => { 
                         if (key === 'ostermalm') {
-                            i.qty_ostermalm = 0;
-                            i.lastUpdateBy_ostermalm = '';
-                            i.lastUpdateDate_ostermalm = '';
+                            i.qty_ostermalm = 0; i.lastUpdateBy_ostermalm = ''; i.lastUpdateDate_ostermalm = '';
                         } else {
-                            i.qty_vasastan = 0;
-                            i.lastUpdateBy_vasastan = '';
-                            i.lastUpdateDate_vasastan = '';
+                            i.qty_vasastan = 0; i.lastUpdateBy_vasastan = ''; i.lastUpdateDate_vasastan = '';
                         }
                     });
-                    saveDataToCloud(); 
-                    refreshAllViews(); 
-                    window.showAlert(`✅ Giacenze e firme azzerate per ${locLabel}!`);
+                    saveDataToCloud(); refreshAllViews(); window.showAlert(`✅ Giacenze azzerate per ${locLabel}!`);
                 }
             } else if (type === 'clear_history') {
-                if (confirm("Svuotare interamente lo storico ordini?")) { window.orderHistoryData = []; saveDataToCloud(); filterHistoryItems(); window.showAlert("🗑️ Storico svuotato!"); }
+                if (confirm("Svuotare lo storico ordini?")) { window.orderHistoryData = []; saveDataToCloud(); filterHistoryItems(); window.showAlert("🗑️ Storico svuotato!"); }
             } else if (type === 'delete_single_history') {
-                if (confirm("Eliminare questa voce dallo storico?")) {
-                    window.orderHistoryData.splice(extraData, 1);
-                    saveDataToCloud(); filterHistoryItems();
-                }
+                if (confirm("Eliminare questa voce dallo storico?")) { window.orderHistoryData.splice(extraData, 1); saveDataToCloud(); filterHistoryItems(); }
             } else if (type === 'reset_suppliers') {
                 if (confirm("Ripristinare i fornitori di default?")) { window.suppliersData = [...window.defaultSuppliers]; saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Fornitori ripristinati!"); }
-            } else if (type === 'reset_inventory') {
-                if (confirm("Ripristinare i prodotti di default del Magazzino?")) { window.inventoryData = []; saveDataToCloud(); refreshAllViews(); window.showAlert("✅ Magazzino ripristinato!"); }
             } else if (type === 'remove_pin') {
-                window.appPin = null; saveDataToCloud(); updatePinUI(); window.showAlert("🔓 PIN rimosso.");
+                window.appPin = null; saveDataToCloud(); updatePinUI(); window.showAlert("🔓 PIN custom rimosso. Ripristinato PIN predefinito (1234).");
             } else if (type === 'reset_all_data') {
-                if (confirm("Reset totale dati?")) {
-                    window.inventoryData = []; window.suppliersData = [...window.defaultSuppliers]; window.recipesData = []; window.orderHistoryData = []; window.appPin = null;
-                    saveDataToCloud(); refreshAllViews(); window.showAlert("⚠️ Reset completato.");
+                if (confirm("RESET TOTALE DATABASE PRODUZIONE?")) {
+                    window.inventoryData = []; window.suppliersData = [...window.defaultSuppliers]; window.recipesData = []; window.orderHistoryData = []; window.bugReportsData = []; window.appPin = null;
+                    saveDataToCloud(); updateBugBadge(); refreshAllViews(); window.showAlert("⚠️ Reset completato.");
                 }
             }
         };
 
         window.updatePinUI = function() {
-            const hasValidPin = window.appPin && window.appPin !== "null";
+            const hasCustomPin = window.appPin && window.appPin !== "null";
             const lab = document.getElementById('pin-status-label');
             const rmBtn = document.getElementById('btn-remove-pin');
             if (lab) {
-                if (hasValidPin) { lab.innerHTML = `✅ PIN Attivo`; lab.style.color = '#2e7d32'; if(rmBtn) rmBtn.style.display = 'inline-block'; }
-                else { lab.innerHTML = '❌ PIN Non Impostato'; lab.style.color = '#e53935'; if(rmBtn) rmBtn.style.display = 'none'; }
+                if (hasCustomPin) { 
+                    lab.innerHTML = `✅ PIN Custom Attivo`; lab.style.color = '#2e7d32'; 
+                    if(rmBtn) rmBtn.style.display = 'inline-block'; 
+                } else { 
+                    lab.innerHTML = '🔑 PIN Predefinito: <b>1234</b> (Modificabile)'; lab.style.color = '#d97706'; 
+                    if(rmBtn) rmBtn.style.display = 'none'; 
+                }
             }
-            ['magazzino', 'fornitori', 'ricette', 'sprechi', 'impostazioni'].forEach(sec => {
-                const el = document.getElementById(`lock-icon-${sec}`);
-                if (el) el.innerText = hasValidPin ? '🔒' : '🔓';
-                const banner = document.getElementById(`lock-banner-${sec}`);
-                if (banner && !hasValidPin) { banner.style.display = 'none'; }
-            });
         };
 
-        window.openSetPinModal = function() { document.getElementById('old-pin-group').style.display = (window.appPin && window.appPin !== "null") ? 'block' : 'none'; document.getElementById('set-pin-modal').classList.add('active'); };
+        window.openSetPinModal = function() { 
+            document.getElementById('old-pin-group').style.display = (window.appPin && window.appPin !== "null") ? 'block' : 'none'; 
+            document.getElementById('set-pin-modal').classList.add('active'); 
+        };
         window.closeSetPinModal = function() { document.getElementById('set-pin-modal').classList.remove('active'); };
         window.saveNewPin = function() {
             const p1 = document.getElementById('input-new-pin').value;
             const p2 = document.getElementById('input-confirm-pin').value;
             if (!/^\d{4}$/.test(p1)) return window.showAlert("⚠️ Il PIN deve essere di 4 cifre.");
             if (p1 !== p2) return window.showAlert("⚠️ I PIN non coincidono.");
-            window.appPin = String(p1); saveDataToCloud(); updatePinUI(); closeSetPinModal(); window.showAlert("🔐 PIN salvato con successo!");
+            window.appPin = String(p1); saveDataToCloud(); updatePinUI(); closeSetPinModal(); window.showAlert("🔐 Nuovo PIN salvato con successo!");
         };
 
         window.sortItemsArray = function(items, sortMode) {
@@ -818,7 +1029,7 @@
 
         window.refreshAllViews = function() { try { filterItems(); filterStockItems(); filterOrderItems(); filterSuppliers(); filterHistoryItems(); filterRecipes(); } catch(e){} };
 
-        // LOGICA SCORTE ISOLATA
+        // SCORTE
         window.updateStock = function(id, d) { 
             const opName = document.getElementById('stock-operator-name')?.value.trim();
             if (!opName) {
@@ -857,13 +1068,29 @@
             const sup = document.getElementById('filter-stock-supplier')?.value || '';
             const sortMode = document.getElementById('sort-stock-select')?.value || 'name-asc';
 
-            let filtered = window.inventoryData.filter(i => i.name.toLowerCase().includes(q) && (!cat || i.category === cat) && (!sup || String(i.supplierId) === String(sup)));
+            let filtered = window.inventoryData.filter(i => {
+                const matchesQ = i.name.toLowerCase().includes(q);
+                const matchesCat = !cat ? true : (cat === 'FAVORITES' ? i.isFavorite === true : i.category === cat);
+                const matchesSup = !sup || String(i.supplierId) === String(sup);
+                return matchesQ && matchesCat && matchesSup;
+            });
             filtered = window.sortItemsArray(filtered, sortMode);
             renderStockList(filtered);
         };
 
         window.renderStockList = function(items) {
             const c = document.getElementById('stock-list'); c.innerHTML = '';
+            
+            if (items.length === 0) {
+                c.innerHTML = `
+                    <div style="text-align:center; padding:30px 16px; background:white; border-radius:10px; border:1px solid #e2e8f0; margin-top:10px;">
+                        <div style="font-size:36px; margin-bottom:8px;">📦</div>
+                        <div style="font-weight:bold; font-size:15px; color:#1e293b;">Nessun prodotto trovato in Scorte</div>
+                        <div style="font-size:12px; color:#64748b; margin-top:4px;">Nessun elemento corrisponde ai filtri selezionati.</div>
+                    </div>`;
+                return;
+            }
+
             items.forEach(item => {
                 const sup = window.suppliersData.find(s => String(s.id) === String(item.supplierId));
                 const qty = window.getQty(item);
@@ -878,7 +1105,10 @@
                 c.innerHTML += `
                     <div class="card-item ${isLow ? 'low-stock-alert' : ''}">
                         <div class="item-name-box" style="border-left-color:${sup?.color || '#334155'};">
-                            <div class="item-name">${item.name}</div>
+                            <div class="item-name">
+                                <span>${item.isFavorite ? '⭐ ' : ''}${item.name}</span>
+                                ${isLow ? `<button class="info-btn" onclick="showInfoModal('Allerta Scorta Minima', 'La giacenza è sotto la soglia minima (${min} ${item.unit}).')">ⓘ</button>` : ''}
+                            </div>
                             <div class="item-subtext" style="font-size:11px; color:#555;">${lastUpdate}</div>
                             <div class="badges-row">
                                 <span class="category-label-tag">${catEmoji} ${item.category}</span>
@@ -886,7 +1116,10 @@
                             </div>
                         </div>
                         <div class="item-controls">
-                            <div class="stock-label-box"><span class="stock-label-main">Giacenza</span><span class="stock-label-sub" style="color:${isLow?'var(--danger)':'#666'};">(Min: ${min})</span></div>
+                            <div class="stock-label-box">
+                                <span class="stock-label-main">Giacenza <button class="info-btn" onclick="showInfoModal('Giacenza Reale', 'Conteggio fisico nello scaffale.')">ⓘ</button></span>
+                                <span class="stock-label-sub" style="color:${isLow?'var(--danger)':'#666'};">(Min: ${min})</span>
+                            </div>
                             <button class="qty-btn" onclick="updateStock(${item.id}, -1)">-</button>
                             <input type="number" class="qty-input" value="${qty}" onchange="setStock(${item.id}, this.value)">
                             <span class="unit-label">${item.unit}</span>
@@ -896,311 +1129,36 @@
             });
         };
 
-        // RICETTE & FOOD COST
-        window.handleRecipeIngredientSearch = function(query) {
-            const resultsDiv = document.getElementById('recipe-search-results');
-            if (!query || query.trim().length < 1) {
-                resultsDiv.style.display = 'none';
-                return;
-            }
-            const q = query.toLowerCase().trim();
-            const matches = window.inventoryData.filter(item => item.name.toLowerCase().includes(q)).slice(0, 10);
-            
-            if (matches.length === 0) {
-                resultsDiv.innerHTML = '<div style="padding:10px; font-size:12px; color:#888;">Nessun ingrediente trovato in magazzino</div>';
-            } else {
-                resultsDiv.innerHTML = matches.map(item => `
-                    <div style="padding:8px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center;" onclick="selectIngredientFromSearch(${item.id})">
-                        <span><b>${item.name}</b> <span style="font-size:10px; color:#666;">(${item.category})</span></span>
-                        <span style="color:var(--primary); font-weight:bold; font-size:12px;">${item.price} SEK / ${item.unit}</span>
-                    </div>
-                `).join('');
-            }
-            resultsDiv.style.display = 'block';
-        };
-
-        window.selectIngredientFromSearch = function(itemId) {
-            const item = window.inventoryData.find(x => String(x.id) === String(itemId));
-            const defaultUnit = (item && (item.unit === 'Unità' || item.name.toLowerCase().includes('buffel'))) ? 'st' : 'g';
-            const defaultQty = defaultUnit === 'st' ? 1 : 80;
-            addRecipeIngredientRow(itemId, defaultQty, defaultUnit);
-            document.getElementById('recipe-search-ingredient-input').value = '';
-            document.getElementById('recipe-search-results').style.display = 'none';
-        };
-
-        window.calculateRecipeFoodCost = function(recipe) {
-            let totalCost = 0;
-            const panettoCost = calculatePanettoCost();
-
-            if (recipe.hasPanetto) { totalCost += panettoCost; }
-
-            if (Array.isArray(recipe.ingredients)) {
-                recipe.ingredients.forEach(ing => {
-                    const invItem = window.inventoryData.find(x => String(x.id) === String(ing.itemId));
-                    if (invItem) {
-                        const qty = parseFloat(ing.qty) || 0;
-                        const unitType = ing.unitType || 'g';
-
-                        if (unitType === 'g') {
-                            const packGrams = getItemPackageGrams(invItem);
-                            totalCost += (((invItem.price || 0) / packGrams) * qty);
-                        } else {
-                            totalCost += ((invItem.price || 0) * qty);
-                        }
-                    }
-                });
-            }
-
-            const sellingPrice = parseFloat(recipe.priceSEK) || 0;
-            const marginSEK = sellingPrice - totalCost;
-            const foodCostPerc = sellingPrice > 0 ? ((totalCost / sellingPrice) * 100).toFixed(1) : "0.0";
-
-            return {
-                totalCost: parseFloat(totalCost.toFixed(2)),
-                marginSEK: parseFloat(marginSEK.toFixed(2)),
-                foodCostPerc: foodCostPerc
-            };
-        };
-
-        window.filterRecipes = function() {
-            const q = (document.getElementById('search-recipe-input')?.value || '').toLowerCase();
-            const container = document.getElementById('recipe-list'); if (!container) return;
-            container.innerHTML = '';
-
-            const panettoCost = calculatePanettoCost();
-            const panettoBadgeEl = document.getElementById('display-panetto-cost-badge');
-            if (panettoBadgeEl) panettoBadgeEl.innerText = `${panettoCost} SEK`;
-
-            let filtered = window.recipesData.filter(r => r.name.toLowerCase().includes(q));
-            filtered.sort((a,b) => a.name.localeCompare(b.name));
-
-            if (filtered.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Nessuna ricetta trovata. Clicca su "+ Nuova Ricetta" per iniziare.</div>';
-                return;
-            }
-
-            filtered.forEach(r => {
-                const fc = calculateRecipeFoodCost(r);
-                let ingHtml = '';
-
-                if (r.hasPanetto) {
-                    ingHtml += `<div class="ingredient-item-row"><span>🍞 Panetto Impasto (285g)</span><b>${panettoCost} SEK</b></div>`;
-                }
-
-                if (Array.isArray(r.ingredients)) {
-                    r.ingredients.forEach(ing => {
-                        const item = window.inventoryData.find(x => String(x.id) === String(ing.itemId));
-                        if (item) {
-                            const qty = parseFloat(ing.qty) || 0;
-                            const unitType = ing.unitType || 'g';
-                            let ingCost = 0;
-
-                            if (unitType === 'g') {
-                                const packGrams = getItemPackageGrams(item);
-                                ingCost = ((item.price || 0) / packGrams) * qty;
-                            } else {
-                                ingCost = (item.price || 0) * qty;
-                            }
-
-                            const unitLabel = unitType === 'g' ? 'g' : (unitType === 'st' ? 'pz' : 'conf');
-                            ingHtml += `<div class="ingredient-item-row"><span>• ${item.name} (${qty} ${unitLabel})</span><b>${ingCost.toFixed(2)} SEK</b></div>`;
-                        }
-                    });
-                }
-
-                container.innerHTML += `
-                    <div class="recipe-card">
-                        <div class="recipe-header-row">
-                            <div class="recipe-title">🍕 ${r.name}</div>
-                            ${r.hasPanetto ? '<span class="badge-panetto">🍞 Con Panetto</span>' : '<span style="font-size:11px; color:#888;">Nessun Panetto</span>'}
-                        </div>
-                        <div class="foodcost-stats-grid">
-                            <div class="fc-stat-box"><span class="fc-stat-label">Prezzo Vendita</span><span class="fc-stat-val" style="color:var(--primary);">${r.priceSEK} SEK</span></div>
-                            <div class="fc-stat-box"><span class="fc-stat-label">Food Cost</span><span class="fc-stat-val" style="color:#c62828;">${fc.totalCost} SEK (${fc.foodCostPerc}%)</span></div>
-                            <div class="fc-stat-box"><span class="fc-stat-label">Margine</span><span class="fc-stat-val" style="color:#2e7d32;">${fc.marginSEK} SEK</span></div>
-                        </div>
-                        <div style="background:#fafafa; border-radius:6px; padding:8px; margin-top:2px;">
-                            <div style="font-size:11px; font-weight:bold; color:#64748b; margin-bottom:4px;">COMPOSIZIONE INGREDIENTI:</div>
-                            ${ingHtml || '<div style="font-size:11px; color:#999;">Nessun ingrediente aggiuntivo</div>'}
-                        </div>
-                        <div class="action-row-btn">
-                            <button class="btn-action-edit" onclick="openRecipeModal(${r.id})">✏️ Modifica Ricetta</button>
-                            <button class="btn-action-del" onclick="deleteRecipe(${r.id})">🗑️ Elimina</button>
-                        </div>
-                    </div>`;
-            });
-        };
-
-        window.openRecipeModal = function(id = null) {
-            document.getElementById('edit-recipe-id').value = '';
-            document.getElementById('recipe-name-input').value = '';
-            document.getElementById('recipe-price-input').value = '125';
-            document.getElementById('recipe-has-panetto-select').value = 'true';
-            document.getElementById('recipe-ingredients-container').innerHTML = '';
-            document.getElementById('recipe-search-ingredient-input').value = '';
-            document.getElementById('recipe-search-results').style.display = 'none';
-            document.getElementById('recipe-modal-title').innerText = '🍕 Nuova Ricetta';
-
-            if (id) {
-                const r = window.recipesData.find(x => x.id === id);
-                if (r) {
-                    document.getElementById('edit-recipe-id').value = r.id;
-                    document.getElementById('recipe-name-input').value = r.name;
-                    document.getElementById('recipe-price-input').value = r.priceSEK;
-                    document.getElementById('recipe-has-panetto-select').value = String(r.hasPanetto);
-                    document.getElementById('recipe-modal-title').innerText = '✏️ Modifica Ricetta';
-
-                    if (Array.isArray(r.ingredients)) {
-                        r.ingredients.forEach(ing => {
-                            addRecipeIngredientRow(ing.itemId, ing.qty, ing.unitType || 'g');
-                        });
-                    }
-                }
-            } else {
-                addRecipeIngredientRow(); 
-            }
-
-            updateModalFoodCostPreview();
-            document.getElementById('recipe-modal').classList.add('active');
-            document.getElementById('overlay').classList.add('active');
-        };
-
-        window.closeRecipeModal = function() {
-            document.getElementById('recipe-modal').classList.remove('active');
-            document.getElementById('overlay').classList.remove('active');
-        };
-
-        window.addRecipeIngredientRow = function(selectedItemId = '', qtyVal = '90', unitTypeVal = 'g') {
-            const container = document.getElementById('recipe-ingredients-container');
-            const rowId = 'ing-row-' + Date.now() + Math.random().toString(36).substr(2, 4);
-
-            let optionsHtml = '<option value="">-- Seleziona Prodotto --</option>';
-            const sortedInv = [...window.inventoryData].sort((a,b) => a.name.localeCompare(b.name));
-            sortedInv.forEach(item => {
-                const sel = String(item.id) === String(selectedItemId) ? 'selected' : '';
-                optionsHtml += `<option value="${item.id}" data-unit="${item.unit}" data-price="${item.price}" ${sel}>${item.name} (${item.price} SEK/${item.unit})</option>`;
-            });
-
-            const rowHtml = `
-                <div id="${rowId}" style="display:flex; gap:6px; align-items:center; background:#f8fafc; padding:6px; border-radius:6px; border:1px solid #e2e8f0;">
-                    <select class="form-control ing-select-item" style="flex:2; font-size:12px;" onchange="updateModalFoodCostPreview()">${optionsHtml}</select>
-                    <input type="number" step="0.5" class="form-control ing-qty-input" value="${qtyVal}" placeholder="Qtà" style="width:70px; font-size:12px;" oninput="updateModalFoodCostPreview()">
-                    <select class="form-control ing-unit-type" style="width:75px; font-size:12px;" onchange="updateModalFoodCostPreview()">
-                        <option value="g" ${unitTypeVal === 'g' ? 'selected' : ''}>Grammi (g)</option>
-                        <option value="st" ${unitTypeVal === 'st' ? 'selected' : ''}>Pezzi (pz)</option>
-                        <option value="unit" ${unitTypeVal === 'unit' ? 'selected' : ''}>Conf. Intera</option>
-                    </select>
-                    <span class="ing-cost-label" style="font-size:11px; font-weight:bold; color:var(--primary); width:60px; text-align:right;">0.00 SEK</span>
-                    <button type="button" onclick="document.getElementById('${rowId}').remove(); updateModalFoodCostPreview();" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; border-radius:4px; padding:4px 8px; font-weight:bold;">✕</button>
-                </div>`;
-            container.innerHTML += rowHtml;
-            updateModalFoodCostPreview();
-        };
-
-        window.updateModalFoodCostPreview = function() {
-            const hasPanetto = document.getElementById('recipe-has-panetto-select').value === 'true';
-            const priceSEK = parseFloat(document.getElementById('recipe-price-input').value) || 0;
-            let total = hasPanetto ? calculatePanettoCost() : 0;
-
-            document.querySelectorAll('#recipe-ingredients-container > div').forEach(row => {
-                const sel = row.querySelector('.ing-select-item');
-                const qtyInp = row.querySelector('.ing-qty-input');
-                const unitSel = row.querySelector('.ing-unit-type');
-                const costLabel = row.querySelector('.ing-cost-label');
-
-                if (sel && qtyInp && sel.value) {
-                    const item = window.inventoryData.find(x => String(x.id) === String(sel.value));
-                    if (item) {
-                        const qty = parseFloat(qtyInp.value) || 0;
-                        const unitType = unitSel?.value || 'g';
-                        let itemCost = 0;
-
-                        if (unitType === 'g') {
-                            const packGrams = getItemPackageGrams(item);
-                            itemCost = ((item.price || 0) / packGrams) * qty;
-                        } else {
-                            itemCost = (item.price || 0) * qty;
-                        }
-
-                        if (costLabel) costLabel.innerText = `${itemCost.toFixed(2)} SEK`;
-                        total += itemCost;
-                    }
-                }
-            });
-
-            const margin = priceSEK - total;
-            const perc = priceSEK > 0 ? ((total / priceSEK) * 100).toFixed(1) : "0.0";
-            const previewEl = document.getElementById('recipe-modal-cost-preview');
-            if (previewEl) {
-                previewEl.innerHTML = `Costo Totale: <b style="color:#c62828;">${total.toFixed(2)} SEK</b> (${perc}%) | Margine: <b style="color:#2e7d32;">${margin.toFixed(2)} SEK</b>`;
-            }
-        };
-
-        window.saveRecipe = function() {
-            const idVal = document.getElementById('edit-recipe-id').value;
-            const name = document.getElementById('recipe-name-input').value.trim();
-            if (!name) return window.showAlert("⚠️ Inserisci il nome della ricetta.");
-
-            const priceSEK = parseFloat(document.getElementById('recipe-price-input').value) || 0;
-            const hasPanetto = document.getElementById('recipe-has-panetto-select').value === 'true';
-
-            let ingredients = [];
-            document.querySelectorAll('#recipe-ingredients-container > div').forEach(row => {
-                const sel = row.querySelector('.ing-select-item');
-                const qtyInp = row.querySelector('.ing-qty-input');
-                const unitSel = row.querySelector('.ing-unit-type');
-
-                if (sel && qtyInp && sel.value) {
-                    ingredients.push({
-                        itemId: parseInt(sel.value),
-                        qty: parseFloat(qtyInp.value) || 0,
-                        unitType: unitSel ? unitSel.value : 'g'
-                    });
-                }
-            });
-
-            if (idVal) {
-                const r = window.recipesData.find(x => x.id === parseInt(idVal));
-                if (r) {
-                    r.name = name;
-                    r.priceSEK = priceSEK;
-                    r.hasPanetto = hasPanetto;
-                    r.ingredients = ingredients;
-                }
-            } else {
-                const newRecipe = { id: Date.now(), name, priceSEK, hasPanetto, ingredients };
-                window.recipesData.push(newRecipe);
-            }
-
-            saveDataToCloud();
-            filterRecipes();
-            closeRecipeModal();
-            window.showAlert("🍕 Ricetta salvata con successo!");
-        };
-
-        window.deleteRecipe = function(id) {
-            if (confirm("Vuoi davvero eliminare questa ricetta?")) {
-                window.recipesData = window.recipesData.filter(x => x.id !== id);
-                saveDataToCloud();
-                filterRecipes();
-                window.showAlert("🗑️ Ricetta eliminata.");
-            }
-        };
-
-        // ORDINI, MAGAZZINO, FORNITORI, STORICO
+        // ORDINI
         window.filterOrderItems = function() {
             const q = (document.getElementById('search-order-input')?.value || '').toLowerCase();
             const cat = document.getElementById('filter-order-category')?.value || '';
             const sup = document.getElementById('filter-order-supplier')?.value || '';
             const sortMode = document.getElementById('sort-order-select')?.value || 'low-stock';
 
-            let filtered = window.inventoryData.filter(i => i.name.toLowerCase().includes(q) && (!cat || i.category === cat) && (!sup || String(i.supplierId) === String(sup)));
+            let filtered = window.inventoryData.filter(i => {
+                const matchesQ = i.name.toLowerCase().includes(q);
+                const matchesCat = !cat ? true : (cat === 'FAVORITES' ? i.isFavorite === true : i.category === cat);
+                const matchesSup = !sup || String(i.supplierId) === String(sup);
+                return matchesQ && matchesCat && matchesSup;
+            });
             filtered = window.sortItemsArray(filtered, sortMode);
             renderOrderList(filtered);
         };
 
         window.renderOrderList = function(items) {
             const c = document.getElementById('order-list'); c.innerHTML = '';
+
+            if (items.length === 0) {
+                c.innerHTML = `
+                    <div style="text-align:center; padding:30px 16px; background:white; border-radius:10px; border:1px solid #e2e8f0; margin-top:10px;">
+                        <div style="font-size:36px; margin-bottom:8px;">📦</div>
+                        <div style="font-weight:bold; font-size:15px; color:#1e293b;">Nessun prodotto trovato in Ordini</div>
+                        <div style="font-size:12px; color:#64748b; margin-top:4px;">Seleziona un'altra categoria o sblocca il Magazzino per aggiungere prodotti.</div>
+                    </div>`;
+                return;
+            }
+
             items.forEach(item => {
                 const sup = window.suppliersData.find(s => String(s.id) === String(item.supplierId));
                 const qty = window.getQty(item), min = window.getMin(item), isLow = qty < min;
@@ -1208,7 +1166,9 @@
                 c.innerHTML += `
                     <div class="card-item ${isLow ? 'low-stock-alert' : ''}">
                         <div class="item-name-box" style="border-left-color:${sup?.color || '#334155'};">
-                            <div class="item-name">${item.name}</div>
+                            <div class="item-name">
+                                <span>${item.isFavorite ? '⭐ ' : ''}${item.name}</span>
+                            </div>
                             <div class="stock-warning-badge ${isLow?'alert':'normal'}">Scorta: ${qty} ${item.unit} (Min: ${min})</div>
                             <div class="badges-row">
                                 <span class="category-label-tag">${catEmoji} ${item.category}</span>
@@ -1236,7 +1196,7 @@
             const dateVal = document.getElementById('order-date-picker').value;
             const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
             if (!dateVal || dateVal < tomorrowStr) {
-                return window.showAlert("🚚 La data di consegna non può essere retroattiva o per oggi. Seleziona da domani in poi.");
+                return window.showAlert("🚚 La data di consegna deve essere da domani in poi.");
             }
 
             const items = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
@@ -1294,13 +1254,18 @@
                     return `<div style="font-size:16px; font-weight:600; margin-bottom:4px; color:#1e293b;">• ${p.name}: <span style="color:var(--primary); font-weight:800;">${p.orderQty} ${sweUnit}</span></div>`;
                 }).join('');
 
-                let supplierCardHtml = `
+                c.innerHTML += `
                     <div style="background:#f9f9f9; padding:16px; border-radius:10px; margin-bottom:16px; border:1px solid #cbd5e1;">
                         <div style="font-weight:800; color:var(--primary); font-size:18px; margin-bottom:8px;">🚚 ${sup?.name || 'Fornitore'}</div>
                         <div style="font-size:15px; color:#333; margin-bottom:12px;"><b>Önskat leveransdatum:</b> <span style="color:var(--primary); font-weight:bold; font-size:16px;">${dateVal}</span></div>
                         
                         <div style="margin-bottom:12px; background:#fff; padding:12px; border-radius:8px; border:1px solid #94a3b8;">
-                            <label style="font-weight:bold; font-size:14px; color:#334155; display:block; margin-bottom:6px;">💬 Note / Commento per ${sup?.name || 'Fornitore'} (Anteckning):</label>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <label style="font-weight:bold; font-size:14px; color:#334155; display:flex; align-items:center;">
+                                    💬 Note / Commento per ${sup?.name || 'Fornitore'}:
+                                </label>
+                                <button class="info-btn" onclick="showInfoModal('Commento Fornitore', 'Digita note specifiche da allegare all\\'ordine.')">ⓘ</button>
+                            </div>
                             <textarea id="note-supplier-${sId}" class="form-control" rows="2" placeholder="Scrivi qui note specifiche..." style="font-size:15px; font-weight:bold; resize:vertical; padding:10px;" oninput="window.updateSupplierNote('${sId}', '${op}', '${dateVal}', this.value)">${supplierNote}</textarea>
                         </div>
 
@@ -1311,17 +1276,20 @@
                         <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
                             <a id="wa-link-${sId}" href="${wa}" target="_blank" style="background:var(--whatsapp); color:white; padding:12px 16px; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">💬 Invia via WhatsApp</a>
                             <a id="mail-link-${sId}" href="${mailto}" target="_blank" style="background:#0288d1; color:white; padding:12px 16px; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">✉️ Invia via Email (${supplierEmail || 'No Email'})</a>
+                            
+                            <button onclick="confirmSingleSupplierOrder('${sId}', '${op}', '${dateVal}')" class="btn-save" style="width:100%; padding:10px; font-weight:bold; font-size:13px; background:#1b5e20; margin-top:4px;">
+                                ✅ Conferma e Salva Ordine Solo per ${sup?.name || 'Fornitore'}
+                            </button>
                         </div>
                     </div>`;
-
-                c.innerHTML += supplierCardHtml;
             }
 
             c.innerHTML += `
-                <button onclick="confirmAndSaveOrderToHistory('${op}')" class="btn-save" style="width:100%; padding:14px; font-weight:bold; font-size:16px; margin-top:10px; background:#1b5e20;">
-                    ✅ Conferma Ordine e Salva in Storico
-                </button>
-            `;
+                <div style="border-top: 2px dashed #cbd5e1; margin-top:16px; padding-top:14px;">
+                    <button onclick="confirmAndSaveOrderToHistory('${op}')" class="btn-save" style="width:100%; padding:14px; font-weight:bold; font-size:15px; background:#043927;">
+                        ✅ Conferma TUTTI gli Ordini e Salva in Storico
+                    </button>
+                </div>`;
         };
 
         window.updateSupplierNote = function(sId, op, dateVal, noteText) {
@@ -1367,6 +1335,38 @@
             if (mailLinkEl) mailLinkEl.href = mailto;
         };
 
+        window.confirmSingleSupplierOrder = function(sId, operator, dateVal) {
+            const items = window.inventoryData.filter(i => String(i.supplierId) === String(sId) && (i.orderQty || 0) > 0);
+            if (items.length === 0) return;
+
+            const sup = window.suppliersData.find(s => String(s.id) === String(sId));
+            const nowStr = new Date().toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            window.orderHistoryData.unshift({
+                id: Date.now() + Math.random(),
+                timestamp: nowStr,
+                destination: window.activeLocation || 'Sede Non Specifica',
+                operatorName: operator,
+                supplierName: sup?.name || 'Fornitore',
+                note: window.supplierNotesMap[sId] || '',
+                items: items.map(i => ({ name: i.name, qty: i.orderQty, unit: i.unit }))
+            });
+
+            items.forEach(i => i.orderQty = 0);
+            delete window.supplierNotesMap[sId];
+
+            saveDataToCloud(); refreshAllViews();
+
+            const remainingItems = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
+            if (remainingItems.length > 0) {
+                window.renderSummaryModalContent(operator, dateVal);
+                window.showAlert(`✅ Ordine per ${sup?.name || 'Fornitore'} salvato in storico!`);
+            } else {
+                closeSummaryModal();
+                window.showAlert("🎉 Tutti gli ordini sono stati confermati e salvati in storico!");
+            }
+        };
+
         window.confirmAndSaveOrderToHistory = function(operator) {
             const items = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
             if (items.length === 0) return;
@@ -1390,10 +1390,8 @@
 
             window.inventoryData.forEach(i => i.orderQty = 0);
             window.supplierNotesMap = {};
-            saveDataToCloud();
-            refreshAllViews();
-            closeSummaryModal();
-            window.showAlert("🎉 Ordine salvato nello storico e carrello svuotato con successo!");
+            saveDataToCloud(); refreshAllViews(); closeSummaryModal();
+            window.showAlert("🎉 Tutti gli ordini sono stati salvati nello storico!");
         };
 
         window.closeSummaryModal = function() { document.getElementById('summary-modal').classList.remove('active'); document.getElementById('overlay').classList.remove('active'); };
@@ -1517,6 +1515,48 @@
             });
         };
 
+        window.filterItems = function() {
+            const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+            const cat = document.getElementById('filter-inventory-category')?.value || '';
+            const sup = document.getElementById('filter-inventory-supplier')?.value || '';
+            const c = document.getElementById('inventory-list'); c.innerHTML = '';
+
+            let items = window.inventoryData.filter(i => {
+                const matchesQ = i.name.toLowerCase().includes(q);
+                const matchesCat = !cat ? true : (cat === 'FAVORITES' ? i.isFavorite === true : i.category === cat);
+                const matchesSup = !sup || String(i.supplierId) === String(sup);
+                return matchesQ && matchesCat && matchesSup;
+            });
+
+            items.sort((a, b) => a.name.localeCompare(b.name));
+
+            items.forEach(item => {
+                const supObj = window.suppliersData.find(s => String(s.id) === String(item.supplierId));
+                const catEmoji = window.getCategoryEmoji(item.category);
+                c.innerHTML += `
+                    <div class="card-item">
+                        <div class="item-name-box" style="border-left-color:${supObj?.color || '#334155'};">
+                            <div class="item-name">
+                                <span>${item.name}</span>
+                                <button class="star-toggle-btn" onclick="toggleFavorite(${item.id})" title="Aggiungi/Rimuovi da Preferiti">
+                                    ${item.isFavorite ? '⭐' : '☆'}
+                                </button>
+                            </div>
+                            <div class="item-subtext">Prezzo: ${item.price} SEK | Unità: ${item.unit}</div>
+                            <div class="badges-row">
+                                <span class="category-label-tag">${catEmoji} ${item.category}</span>
+                                <span class="supplier-badge" style="background:${supObj?.color || '#334155'}">${supObj?.name || 'N/D'}</span>
+                                ${item.isFavorite ? '<span style="font-size:11px; font-weight:bold; color:#b45309; background:#fffbeb; padding:2px 6px; border-radius:4px; border:1px solid #fef3c7;">⭐ PREFERITO</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="action-row-btn">
+                            <button class="btn-action-edit" onclick="openAddModal(${item.id})">✏️ Modifica</button>
+                            <button class="btn-action-del" onclick="deleteInventoryItem(${item.id})">🗑️ Elimina</button>
+                        </div>
+                    </div>`;
+            });
+        };
+
         window.openAddModal = function(id = null) {
             populateAllSupplierFilters();
             document.getElementById('edit-item-id').value = '';
@@ -1627,41 +1667,6 @@
             }
         };
 
-        window.filterItems = function() {
-            const q = (document.getElementById('search-input')?.value || '').toLowerCase();
-            const cat = document.getElementById('filter-inventory-category')?.value || '';
-            const sup = document.getElementById('filter-inventory-supplier')?.value || '';
-            const c = document.getElementById('inventory-list'); c.innerHTML = '';
-
-            let items = window.inventoryData.filter(i => 
-                i.name.toLowerCase().includes(q) && 
-                (!cat || i.category === cat) && 
-                (!sup || String(i.supplierId) === String(sup))
-            );
-
-            items.sort((a, b) => a.name.localeCompare(b.name));
-
-            items.forEach(item => {
-                const supObj = window.suppliersData.find(s => String(s.id) === String(item.supplierId));
-                const catEmoji = window.getCategoryEmoji(item.category);
-                c.innerHTML += `
-                    <div class="card-item">
-                        <div class="item-name-box" style="border-left-color:${supObj?.color || '#334155'};">
-                            <div class="item-name">${item.name}</div>
-                            <div class="item-subtext">Prezzo: ${item.price} SEK | Unità: ${item.unit}</div>
-                            <div class="badges-row">
-                                <span class="category-label-tag">${catEmoji} ${item.category}</span>
-                                <span class="supplier-badge" style="background:${supObj?.color || '#334155'}">${supObj?.name || 'N/D'}</span>
-                            </div>
-                        </div>
-                        <div class="action-row-btn">
-                            <button class="btn-action-edit" onclick="openAddModal(${item.id})">✏️ Modifica</button>
-                            <button class="btn-action-del" onclick="deleteInventoryItem(${item.id})">🗑️ Elimina</button>
-                        </div>
-                    </div>`;
-            });
-        };
-
         window.filterSuppliers = function() {
             const q = (document.getElementById('search-supplier-input')?.value || '').toLowerCase();
             const c = document.getElementById('suppliers-list'); c.innerHTML = '';
@@ -1684,24 +1689,69 @@
             });
         };
 
-        window.promptExportExcelModal = function() { document.getElementById('export-excel-modal').classList.add('active'); document.getElementById('overlay').classList.add('active'); };
-        window.closeExportExcelModal = function() { document.getElementById('export-excel-modal').classList.remove('active'); document.getElementById('overlay').classList.remove('active'); };
+        window.promptExportExcelModal = function() { 
+            const opNameInp = document.getElementById('order-operator-name')?.value || document.getElementById('stock-operator-name')?.value || '';
+            if (opNameInp) document.getElementById('export-operator-name').value = opNameInp;
+            document.getElementById('export-excel-modal').classList.add('active'); 
+            document.getElementById('overlay').classList.add('active'); 
+        };
+
+        window.closeExportExcelModal = function() { 
+            document.getElementById('export-excel-modal').classList.remove('active'); 
+            document.getElementById('overlay').classList.remove('active'); 
+        };
+
         window.generateAndExportExcel = function() {
             const type = document.getElementById('export-type-select').value;
-            const rows = [["ITEM NAME", "CATEGORY", "SUPPLIER", "UNIT PRICE (SEK)", "STOCK LEVEL", "UNIT", "TOTAL VALUE"]];
-            let tot = 0;
+            const opName = document.getElementById('export-operator-name').value.trim() || 'N/D';
+            const targetEmail = document.getElementById('export-target-email').value.trim();
+            const nowStr = new Date().toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const locName = window.activeLocation || 'Vasastan';
+
+            const typeLabelMap = {
+                'food': '🍕 Food & Supplies',
+                'alcohol': '🍷 Alcohol & Beverages',
+                'all': '📦 Full Inventory'
+            };
+
+            const rows = [
+                ["MAGARI INVENTORY REPORT", ""],
+                ["Date & Time:", nowStr],
+                ["Location:", locName],
+                ["Operator:", opName],
+                ["Report Type:", typeLabelMap[type] || type],
+                [""],
+                ["ITEM NAME", "CATEGORY", "SUPPLIER", "UNIT PRICE (SEK)", "STOCK LEVEL", "UNIT", "TOTAL VALUE (SEK)"]
+            ];
+
+            let totalVal = 0;
             window.inventoryData.forEach(i => {
                 const isAlc = ['Alcolici', 'Bevande'].includes(i.category);
                 if (type === 'food' && isAlc) return;
                 if (type === 'alcohol' && !isAlc) return;
-                const sup = window.suppliersData.find(s => s.id === i.supplierId)?.name || '';
-                const q = window.getQty(i), val = q * (i.price || 0); tot += val;
-                rows.push([i.name, i.category, sup, i.price || 0, q, i.unit, val]);
+                
+                const sup = window.suppliersData.find(s => String(s.id) === String(i.supplierId))?.name || 'N/D';
+                const q = window.getQty(i);
+                const val = q * (i.price || 0);
+                totalVal += val;
+
+                rows.push([i.name, i.category, sup, i.price || 0, q, i.unit, parseFloat(val.toFixed(2))]);
             });
-            rows.push(["TOTAL INVENTORY VALUE", "", "", "", "", "", tot]);
-            const ws = XLSX.utils.aoa_to_sheet(rows), wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-            XLSX.writeFile(wb, `Inventory_Magari_${(window.activeLocation || '').split(' ')[0]}.xlsx`);
+
+            rows.push(["TOTAL INVENTORY VALUE", "", "", "", "", "", parseFloat(totalVal.toFixed(2))]);
+
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Inventory_Magari");
+            
+            const dateFileStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Inventory_Magari_${locName.split(' ')[0]}_${dateFileStr}.xlsx`);
+
+            if (targetEmail) {
+                window.showAlert(`📊 Excel scaricato! Puoi inviarlo a ${targetEmail}`);
+            } else {
+                window.showAlert("📊 Excel generato e scaricato con successo!");
+            }
             closeExportExcelModal();
         };
 
