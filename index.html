@@ -1,32 +1,41 @@
-<!--
-====================================================================
-[MAGARI APP - HISTORICAL CHANGELOG REGISTRY]
-- v3.7.4 (PRODUZIONE - FIX PIN BANNER POSITION & CLEANUP):
-  * Posizionamento fisso in alto (padding-top: 80px) per il banner di richiesta PIN nei menu lunghi.
-  * Rimosse le diciture del PIN di default "(Default: 1234)" da tutti i lucchetti e modali.
-- v3.7.3 (PRODUZIONE):
-  * Rilascio stabile su documento Firestore "magazzino_db/dati".
-  * Blocco PIN gestore obbligatorio su tutte le sezioni di gestione.
-  * Export Excel completo di metadati (Data/Ora, Sede, Operatore, Tipo Report, Valore totale).
-  * Ripristinato sistema Preferiti (⭐) con filtro rapido in Ordini/Scorte.
-====================================================================
--->
 <!DOCTYPE html>
 <html lang="it">
 <head>
+<!--
+====================================================================
+[MAGARI APP - HISTORICAL CHANGELOG REGISTRY]
+- v3.7.7 (PRODUZIONE - FIX RENDER COMMENTO):
+  * Risolto bug visivo del codice: rimosso il simbolo della freccia (doppio trattino) dal testo del changelog che chiudeva prematuramente il tag HTML del commento, rendendolo visibile su schermo.
+- v3.7.6 (PRODUZIONE - FORMATO MAIL COMPATTO & FIX MOBILE):
+  * Sostituito il distanziatore esteso con la sintassi compattata "• PRODOTTO -> QTY UNIT" nel corpo dell'email per ridurre la lunghezza degli URL mailto e prevenire i blocchi su mobile.
+  * Confermata la rimozione di target="_blank" da tutti i link mailto per aprire istantaneamente l'app di posta nativa dello smartphone.
+  * Registro Changelog posizionato internamente al tag head per evitare problemi di rendering.
+- v3.7.5 (PRODUZIONE):
+  * Target Documento Firestore PRODUZIONE: "magazzino_db/dati".
+  * Aggiunte regole CSS min-width: 0 e overflow-x: hidden per evitare strabordamenti orizzontali.
+- v3.7.4 (PRODUZIONE):
+  * Posizionamento fisso in alto (padding-top: 80px) per il banner di richiesta PIN nei menu lunghi.
+- v3.7.3 (PRODUZIONE):
+  * Blocco PIN gestore obbligatorio su tutte le sezioni di gestione.
+  * Export Excel completo di metadati e ripristinato sistema Preferiti.
+====================================================================
+-->
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#043927">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Magari">
-    <title>Magari v3.7.4</title>
+    <title>Magari v3.7.7</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+    <!-- ==================================================================== -->
+    <!-- STILI CSS APPLICATIVI                                                -->
+    <!-- ==================================================================== -->
     <style>
         :root {
             --primary: #043927; --bg: #f4f6f8; --card-bg: #ffffff; --text: #222222;
@@ -35,9 +44,10 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; }
+        html, body { width: 100%; overflow-x: hidden; background-color: var(--bg); color: var(--text); }
+        body { display: flex; justify-content: center; min-height: 100vh; }
 
-        .app-container { width: 100%; max-width: 430px; min-height: 100vh; background-color: var(--bg); position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; transition: max-width 0.3s ease; }
+        .app-container { width: 100%; max-width: 430px; min-height: 100vh; background-color: var(--bg); position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; transition: max-width 0.3s ease; overflow-x: hidden; }
         
         .header { background-color: var(--primary); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         .menu-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
@@ -46,15 +56,18 @@
         .brand-subtitle { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 8px; font-weight: 700; color: #c8e6c9; letter-spacing: 1px; margin-top: 3px; text-transform: uppercase; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; }
         .page-badge { font-size: 11px; background: rgba(0, 0, 0, 0.25); color: #fff; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
 
-        .top-bar-container { padding: 12px 16px; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(5px); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-        .search-row { display: flex; gap: 8px; }
-        .search-input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; width: 100%; }
-        .filter-select, .location-select, .date-picker, .operator-input { padding: 8px 12px; border: 1px solid var(--primary); border-radius: 8px; font-size: 13px; font-weight: 600; background-color: #f0f7f4; color: var(--primary); outline: none; width: 100%; }
-        .add-btn { background-color: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; }
+        .top-bar-container { padding: 12px 16px; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(5px); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; width: 100%; }
+        .top-bar-container div { min-width: 0; }
+
+        .search-row { display: flex; gap: 8px; width: 100%; }
+        .search-input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; width: 100%; }
+        .filter-select, .location-select, .date-picker, .operator-input { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--primary); border-radius: 8px; font-size: 13px; font-weight: 600; background-color: #f0f7f4; color: var(--primary); outline: none; width: 100%; text-overflow: ellipsis; }
+        
+        .add-btn { background-color: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
         .btn-excel { background-color: var(--excel-green); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; box-shadow: 0 2px 6px rgba(16, 124, 65, 0.3); }
         .reset-btn { background-color: #fff3f0; color: var(--danger); border: 1px solid var(--danger); padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; width: 100%; }
 
-        .info-btn { background: #e2e8f0; border: none; color: #475569; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .info-btn { background: #e2e8f0; border: none; color: #475569; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-left: 4px; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .info-btn:hover { background: #cbd5e1; color: #1e293b; }
 
         .star-toggle-btn { background: none; border: none; font-size: 20px; cursor: pointer; transition: transform 0.15s ease; padding: 2px 4px; }
@@ -62,11 +75,10 @@
 
         .location-active-banner { background: #e8f5e9; border-bottom: 1px solid #c8e6c9; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: bold; color: #2e7d32; }
 
-        .view-section { display: none; flex-direction: column; flex: 1; padding-bottom: 20px; position: relative; }
+        .view-section { display: none; flex-direction: column; flex: 1; padding-bottom: 20px; position: relative; width: 100%; }
         .view-section.active { display: flex; }
         #view-ordini { padding-bottom: 80px; }
 
-        /* FIX POSIZIONAMENTO LOCK BANNER PIN */
         .page-lock-banner { 
             position: absolute; 
             top: 0; 
@@ -86,8 +98,8 @@
         }
         .page-lock-box { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 100%; max-width: 320px; border: 1px solid var(--border); }
 
-        .content-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
-        .card-item { background-color: rgba(255, 255, 255, 0.95); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
+        .content-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; width: 100%; }
+        .card-item { background-color: rgba(255, 255, 255, 0.95); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; width: 100%; }
         
         @keyframes pulseBorder {
             0% { border-color: var(--danger); box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.4); }
@@ -113,7 +125,7 @@
         .qty-input { width: 58px; min-width: 58px; text-align: center; padding: 6px 2px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; font-weight: 700; flex-shrink: 0; }
         .unit-label { font-size: 13px; color: var(--text-secondary); font-weight: 700; min-width: 38px; flex-shrink: 0; }
 
-        .stock-label-box { display: flex; flex-direction: column; margin-right: auto; line-height: 1.25; }
+        .stock-label-box { display: flex; flex-direction: column; margin-right: auto; line-height: 1.25; min-width: 0; }
         .stock-label-main { font-size: 13px; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; }
         .stock-label-sub { font-size: 11px; font-weight: bold; margin-top: 2px; }
 
@@ -188,8 +200,10 @@
 </head>
 <body>
 
+    <!-- NOTIFICA TOAST GLOBAL -->
     <div id="toast-notification" class="toast-notification"></div>
 
+    <!-- BANNER GUARDIA SELEZIONE SEDE -->
     <div class="page-lock-banner" id="location-guard-banner" style="display: flex; position: fixed; z-index: 1000; padding-top: 100px;">
         <div class="page-lock-box" style="max-width: 340px;">
             <div style="font-size: 32px; margin-bottom: 8px;">📍</div>
@@ -202,13 +216,15 @@
         </div>
     </div>
 
+    <!-- CONTENITORE PRINCIPALE APP -->
     <div class="app-container">
         <div class="overlay" id="overlay" onclick="closeAll()"></div>
 
+        <!-- DRAWER MENU LATERALE -->
         <div class="drawer" id="drawer">
             <div class="drawer-header">
                 <div class="brand-title" style="font-size: 24px;">MAGARI</div>
-                <div class="brand-subtitle" style="font-size: 8px;">v3.7.4 PRODUZIONE</div>
+                <div class="brand-subtitle" style="font-size: 8px;">v3.7.7 PRODUZIONE</div>
             </div>
             <ul class="drawer-menu">
                 <li onclick="navigateTo('ordini')">🛒 Ordini</li>
@@ -227,38 +243,37 @@
             </ul>
         </div>
 
+        <!-- HEADER STICKY -->
         <div class="header">
             <button class="menu-btn" onclick="toggleMenu()">☰</button>
             <div class="header-brand-text">
                 <div class="brand-title">MAGARI</div>
-                <div class="brand-subtitle">v3.7.4 PRODUZIONE</div>
+                <div class="brand-subtitle">v3.7.7 PRODUZIONE</div>
             </div>
             <div class="page-badge" id="page-title">Ordini</div>
         </div>
 
+        <!-- BANNER SEDE ATTIVA -->
         <div class="location-active-banner" id="active-location-banner" style="display: none;">
             <span id="active-location-text">📍 Sede: Non selezionata</span>
             <button onclick="promptChangeLocation()" style="background: white; border: 1px solid #2e7d32; color: #2e7d32; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">Cambia Sede</button>
         </div>
 
-
-
-
-<!-- 1. ORDINI -->
+        <!-- 1. SEZIONE ORDINI -->
         <div id="view-ordini" class="view-section active">
             <div class="top-bar-container">
-                <div style="display:flex; align-items:center;">
+                <div style="display:flex; align-items:center; width: 100%;">
                     <input type="text" id="order-operator-name" class="operator-input" placeholder="👤 Nome Operatore (Chi ordina?)" required>
                     <button class="info-btn" onclick="showInfoModal('Firma Operatore Ordine', 'Inserisci il tuo nome prima di procedere. La firma verrà salvata insieme all\'ordine nello storico e nella notifica al fornitore.')">ⓘ</button>
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">🚚 Consegna Desiderata:</label>
+                <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0;">🚚 Consegna:</label>
                     <input type="date" id="order-date-picker" class="date-picker">
                     <button class="info-btn" onclick="showInfoModal('Data Consegna Desiderata', 'Seleziona la data in cui il fornitore deve consegnare la merce. Non è possibile selezionare oggi o date passate.')">ⓘ</button>
                 </div>
-                <div style="display: flex; gap: 8px;">
+                <div style="display: flex; gap: 8px; width: 100%;">
                     <select id="filter-order-category" class="filter-select" onchange="filterOrderItems()">
-                        <option value="">📂 Tutte le Categorie</option>
+                        <option value="">📂 Categorie</option>
                         <option value="FAVORITES" style="font-weight:bold; color:#b45309;">⭐ Solo Preferiti</option>
                         <option value="Latticini">🧀 Latticini</option>
                         <option value="Farine & Secco">🌾 Farine & Secco</option>
@@ -271,9 +286,9 @@
                         <option value="Pulizia & Monouso">🧹 Pulizia & Monouso</option>
                         <option value="Altro">📦 Altro</option>
                     </select>
-                    <select id="filter-order-supplier" class="filter-select" onchange="filterOrderItems()"><option value="">🚚 Tutti i Fornitori</option></select>
+                    <select id="filter-order-supplier" class="filter-select" onchange="filterOrderItems()"><option value="">🚚 Fornitori</option></select>
                 </div>
-                <div style="display: flex; gap: 8px;">
+                <div style="display: flex; gap: 8px; width: 100%;">
                     <select id="sort-order-select" class="filter-select" onchange="filterOrderItems()">
                         <option value="low-stock">⚠️ Prima Scorte in Esaurimento</option>
                         <option value="name-asc">🔤 Nome (A - Z)</option>
@@ -288,21 +303,21 @@
             <div class="sticky-checkout-container"><button class="btn-checkout" onclick="generateOrderSummary()">📋 Genera Riepilogo Ordine</button></div>
         </div>
 
-        <!-- 2. SCORTE -->
+        <!-- 2. SEZIONE SCORTE -->
         <div id="view-scorte" class="view-section">
             <div class="top-bar-container">
-                <div style="display:flex; align-items:center;">
+                <div style="display:flex; align-items:center; width: 100%;">
                     <input type="text" id="stock-operator-name" class="operator-input" placeholder="✍️ Nome / Firma Operatore Giacenze" required>
                     <button class="info-btn" onclick="showInfoModal('Firma Controllo Scorte', 'Inserisci il tuo nome per registrare chi ha eseguito il controllo scorte.')">ⓘ</button>
                 </div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <button class="btn-excel" onclick="promptExportExcelModal()">📊 Export Inventory (English Excel)</button>
+                <div style="display:flex; gap:8px; align-items:center; width: 100%;">
+                    <button class="btn-excel" onclick="promptExportExcelModal()">📊 Export Inventory (Excel)</button>
                     <button class="info-btn" onclick="showInfoModal('Export Inventario Excel', 'Genera un file Excel formattato con Data, Sede, Operatore e Valore Economico di Magazzino.')">ⓘ</button>
                 </div>
                 <button class="reset-btn" onclick="requestPinAction('reset_stock_quantities')">🔒 🔄 Azzera Giacenze Sede Attiva</button>
-                <div style="display: flex; gap: 8px;">
+                <div style="display: flex; gap: 8px; width: 100%;">
                     <select id="filter-stock-category" class="filter-select" onchange="filterStockItems()">
-                        <option value="">📂 Tutte le Categorie</option>
+                        <option value="">📂 Categorie</option>
                         <option value="FAVORITES" style="font-weight:bold; color:#b45309;">⭐ Solo Preferiti</option>
                         <option value="Latticini">🧀 Latticini</option>
                         <option value="Farine & Secco">🌾 Farine & Secco</option>
@@ -315,9 +330,9 @@
                         <option value="Pulizia & Monouso">🧹 Pulizia & Monouso</option>
                         <option value="Altro">📦 Altro</option>
                     </select>
-                    <select id="filter-stock-supplier" class="filter-select" onchange="filterStockItems()"><option value="">🚚 Tutti i Fornitori</option></select>
+                    <select id="filter-stock-supplier" class="filter-select" onchange="filterStockItems()"><option value="">🚚 Fornitori</option></select>
                 </div>
-                <div style="display: flex; gap: 8px;">
+                <div style="display: flex; gap: 8px; width: 100%;">
                     <select id="sort-stock-select" class="filter-select" onchange="filterStockItems()">
                         <option value="name-asc">🔤 Nome (A - Z)</option>
                         <option value="name-desc">🔤 Nome (Z - A)</option>
@@ -331,7 +346,7 @@
             <div class="content-list" id="stock-list"></div>
         </div>
 
-        <!-- 3. RICETTE & FOOD COST -->
+        <!-- 3. SEZIONE RICETTE & FOOD COST -->
         <div id="view-ricette" class="view-section">
             <div class="page-lock-banner" id="lock-banner-ricette">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Ricette Bloccate</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN gestore</p><input type="password" id="pin-input-ricette" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('ricette')">Conferma</button></div></div>
@@ -349,7 +364,7 @@
             <div class="content-list" id="recipe-list"></div>
         </div>
 
-        <!-- 4. STORICO -->
+        <!-- 4. SEZIONE STORICO ORDINI -->
         <div id="view-storico" class="view-section">
             <div class="top-bar-container">
                 <button class="reset-btn" onclick="requestPinAction('clear_history')">🔒 🗑️ Svuota Tutto lo Storico Ordini</button>
@@ -362,7 +377,7 @@
             <div class="content-list" id="history-list"></div>
         </div>
 
-        <!-- 5. MAGAZZINO -->
+        <!-- 5. SEZIONE MAGAZZINO -->
         <div id="view-magazzino" class="view-section">
             <div class="page-lock-banner" id="lock-banner-magazzino">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Magazzino Bloccato</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN gestore</p><input type="password" id="pin-input-magazzino" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('magazzino')">Conferma</button></div></div>
@@ -371,9 +386,9 @@
                 <div style="font-size:11px; background:#fff3cd; color:#856404; padding:6px 10px; border-radius:6px; font-weight:600;">
                     ⭐ <b>Gestione Preferiti:</b> Clicca sulla stellina accanto ai prodotti per contrassegnare gli ingredienti principali per lo staff.
                 </div>
-                <div style="display: flex; gap: 8px;">
+                <div style="display: flex; gap: 8px; width: 100%;">
                     <select id="filter-inventory-category" class="filter-select" onchange="filterItems()">
-                        <option value="">📂 Tutte le Categorie</option>
+                        <option value="">📂 Categorie</option>
                         <option value="FAVORITES" style="font-weight:bold; color:#b45309;">⭐ Solo Preferiti</option>
                         <option value="Latticini">🧀 Latticini</option>
                         <option value="Farine & Secco">🌾 Farine & Secco</option>
@@ -386,14 +401,14 @@
                         <option value="Pulizia & Monouso">🧹 Pulizia & Monouso</option>
                         <option value="Altro">📦 Altro</option>
                     </select>
-                    <select id="filter-inventory-supplier" class="filter-select" onchange="filterItems()"><option value="">🚚 Tutti i Fornitori</option></select>
+                    <select id="filter-inventory-supplier" class="filter-select" onchange="filterItems()"><option value="">🚚 Fornitori</option></select>
                 </div>
                 <div class="search-row"><input type="text" id="search-input" class="search-input" placeholder="Cerca in anagrafica..." oninput="filterItems()"><button class="add-btn" onclick="openAddModal()">+ Nuovo</button></div>
             </div>
             <div class="content-list" id="inventory-list"></div>
         </div>
 
-        <!-- 6. FORNITORI -->
+        <!-- 6. SEZIONE FORNITORI -->
         <div id="view-fornitori" class="view-section">
             <div class="page-lock-banner" id="lock-banner-fornitori">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Fornitori Bloccati</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN gestore</p><input type="password" id="pin-input-fornitori" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('fornitori')">Conferma</button></div></div>
@@ -402,7 +417,7 @@
             <div class="content-list" id="suppliers-list"></div>
         </div>
 
-        <!-- 7. REPORT CONSUMI -->
+        <!-- 7. SEZIONE REPORT CONSUMI -->
         <div id="view-sprechi" class="view-section">
             <div class="page-lock-banner" id="lock-banner-sprechi">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Report Bloccati</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN gestore</p><input type="password" id="pin-input-sprechi" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('sprechi')">Conferma</button></div></div>
@@ -421,7 +436,7 @@
             </div>
         </div>
 
-        <!-- 8. GUIDA & FAQ -->
+        <!-- 8. SEZIONE GUIDA & FAQ -->
         <div id="view-faq" class="view-section">
             <div class="top-bar-container">
                 <div style="font-size:16px; font-weight:800; color:var(--primary);">❓ Guida Rapida & Domande Frequenti</div>
@@ -443,7 +458,7 @@
             </div>
         </div>
 
-        <!-- 9. SEGNALA BUG & FEEDBACK -->
+        <!-- 9. SEZIONE SEGNALA BUG & FEEDBACK -->
         <div id="view-bugreport" class="view-section">
             <div class="top-bar-container">
                 <div style="font-size:16px; font-weight:800; color:#d97706;">🐛 Segnala Bug o Invia Feedback</div>
@@ -458,7 +473,7 @@
             </div>
         </div>
 
-        <!-- 10. IMPOSTAZIONI -->
+        <!-- 10. SEZIONE IMPOSTAZIONI -->
         <div id="view-impostazioni" class="view-section">
             <div class="page-lock-banner" id="lock-banner-impostazioni">
                 <div class="page-lock-box"><div style="font-size: 32px; margin-bottom: 8px;">🔒</div><h3 style="margin-bottom: 6px;">Impostazioni Bloccate</h3><p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Inserisci il PIN gestore</p><input type="password" id="pin-input-impostazioni" class="form-control pin-input" maxlength="4" placeholder="••••" style="margin-bottom: 12px;"><div style="display: flex; gap: 8px; justify-content: center;"><button class="btn-cancel" onclick="navigateTo('ordini')">Annulla</button><button class="btn-save" onclick="verifySectionPin('impostazioni')">Conferma</button></div></div>
@@ -484,7 +499,9 @@
         </div>
     </div>
 
-    <!-- MODALI -->
+    <!-- ==================================================================== -->
+    <!-- MODALI DI DIALOGO                                                    -->
+    <!-- ==================================================================== -->
     <div class="modal" id="info-modal">
         <div class="modal-title" id="info-modal-title" style="color:var(--primary); font-size:18px;">ℹ️ Informazione</div>
         <div id="info-modal-body" style="font-size:14px; color:#334155; line-height:1.5; margin-bottom:16px;"></div>
@@ -578,25 +595,10 @@
         <div class="modal-actions"><button class="btn-cancel" onclick="closeAddSupplierModal()">Annulla</button><button class="btn-save" onclick="saveSupplier()">Salva</button></div>
     </div>
 
-
-
-
-<!-- LOGICA JAVASCRIPT APPLICATIVA (v3.7.4 PRODUZIONE) -->
+    <!-- ==================================================================== -->
+    <!-- LOGICA JAVASCRIPT APPLICATIVA (v3.7.7 PRODUZIONE)                     -->
+    <!-- ==================================================================== -->
     <script type="module">
-        /*
-        ====================================================================
-        [MAGARI APP - HISTORICAL CHANGELOG REGISTRY]
-        - v3.7.4 (PRODUZIONE):
-          * Target Documento Firestore PRODUZIONE: "magazzino_db/dati".
-          * Posizionamento ottimizzato in alto del banner di blocco PIN per schermate lunghe.
-          * Rimosse diciture "Default: 1234" dai lucchetti e dai modali.
-        - v3.7.3 (PRODUZIONE):
-          * Blocco PIN gestore obbligatorio per tutte le sezioni protette.
-          * Export Excel completo di metadati (Data/Ora, Sede, Operatore, Tipo Report).
-          * Ripristinato sistema Preferiti (⭐) con filtro rapido in Ordini/Scorte.
-        ====================================================================
-        */
-
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -1221,27 +1223,27 @@
                 const supplierEmail = sup?.email || '';
                 const supplierNote = window.supplierNotesMap[sId] || '';
 
+                // TESTO WHATSAPP (Grassetto * + Nomi e Quantità in MAIUSCOLO)
                 let waTxt = `*BESTÄLLNING MAGARI - ${locName.toUpperCase()}*\n`;
-                waTxt += `👤 Beställare: ${op}\n`;
+                waTxt += `👤 Beställare: *${op.toUpperCase()}*\n`;
                 waTxt += `🚚 Önskat leveransdatum: *${dateVal}*\n`;
                 if (supplierNote.trim()) waTxt += `💬 Anteckning: *${supplierNote.trim()}*\n`;
-                waTxt += `\nProdukter:\n`;
+                waTxt += `\n*PRODUKTER:*\n`;
                 groups[sId].forEach(p => { 
                     const sweUnit = window.translateUnitToSwedish(p.unit);
-                    waTxt += `• ${p.name}: *${p.orderQty} ${sweUnit}*\n`; 
+                    waTxt += `• *${p.name.toUpperCase()}*  ->  *${p.orderQty} ${sweUnit.toUpperCase()}*\n`; 
                 });
                 waTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
 
-                let mailTxt = `BESTÄLLNING MAGARI - ${locName.toUpperCase()}\n`;
-                mailTxt += `========================================\n`;
-                mailTxt += `👤 BESTÄLLARE: ${op}\n`;
-                mailTxt += `🚚 ÖNSKAT LEVERANSDATUM: ${dateVal}\n`;
-                if (supplierNote.trim()) mailTxt += `💬 ANTECKNING: ${supplierNote.trim().toUpperCase()}\n`;
-                mailTxt += `========================================\n\n`;
-                mailTxt += `PRODUKTER:\n`;
+                // TESTO EMAIL (Formato Pulito e Compatto per dispositivi Mobile)
+                let mailTxt = `BESTÄLLNING MAGARI - ${locName.toUpperCase()}\n\n`;
+                mailTxt += `BESTÄLLARE: ${op.toUpperCase()}\n`;
+                mailTxt += `ÖNSKAT LEVERANSDATUM: ${dateVal}\n`;
+                if (supplierNote.trim()) mailTxt += `ANTECKNING: ${supplierNote.trim()}\n`;
+                mailTxt += `\nPRODUKTER:\n`;
                 groups[sId].forEach(p => { 
                     const sweUnit = window.translateUnitToSwedish(p.unit);
-                    mailTxt += `• ${p.name}: ${p.orderQty} ${sweUnit}\n`; 
+                    mailTxt += `• ${p.name.toUpperCase()}  ->  ${p.orderQty} ${sweUnit.toUpperCase()}\n`; 
                 });
                 mailTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
 
@@ -1251,7 +1253,7 @@
 
                 let itemsListHtml = groups[sId].map(p => {
                     const sweUnit = window.translateUnitToSwedish(p.unit);
-                    return `<div style="font-size:16px; font-weight:600; margin-bottom:4px; color:#1e293b;">• ${p.name}: <span style="color:var(--primary); font-weight:800;">${p.orderQty} ${sweUnit}</span></div>`;
+                    return `<div style="font-size:15px; font-weight:600; margin-bottom:4px; color:#1e293b;">• <b>${p.name.toUpperCase()}</b>  ->  <span style="color:var(--primary); font-weight:800;">${p.orderQty} ${sweUnit.toUpperCase()}</span></div>`;
                 }).join('');
 
                 c.innerHTML += `
@@ -1274,8 +1276,8 @@
                         </div>
 
                         <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-                            <a id="wa-link-${sId}" href="${wa}" target="_blank" style="background:var(--whatsapp); color:white; padding:12px 16px; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">💬 Invia via WhatsApp</a>
-                            <a id="mail-link-${sId}" href="${mailto}" target="_blank" style="background:#0288d1; color:white; padding:12px 16px; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">✉️ Invia via Email (${supplierEmail || 'No Email'})</a>
+                            <a id="wa-link-${sId}" href="${wa}" style="background:var(--whatsapp); color:white; padding:12px 16px; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">💬 Invia via WhatsApp</a>
+                            <a id="mail-link-${sId}" href="${mailto}" style="background:#0288d1; color:white; padding:12px 16px; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">✉️ Invia via Email (${supplierEmail || 'No Email'})</a>
                             
                             <button onclick="confirmSingleSupplierOrder('${sId}', '${op}', '${dateVal}')" class="btn-save" style="width:100%; padding:10px; font-weight:bold; font-size:13px; background:#1b5e20; margin-top:4px;">
                                 ✅ Conferma e Salva Ordine Solo per ${sup?.name || 'Fornitore'}
@@ -1302,26 +1304,24 @@
             const items = window.inventoryData.filter(i => String(i.supplierId) === String(sId) && (i.orderQty || 0) > 0);
 
             let waTxt = `*BESTÄLLNING MAGARI - ${locName.toUpperCase()}*\n`;
-            waTxt += `👤 Beställare: ${op}\n`;
+            waTxt += `👤 Beställare: *${op.toUpperCase()}*\n`;
             waTxt += `🚚 Önskat leveransdatum: *${dateVal}*\n`;
             if (noteText.trim()) waTxt += `💬 Anteckning: *${noteText.trim()}*\n`;
-            waTxt += `\nProdukter:\n`;
+            waTxt += `\n*PRODUKTER:*\n`;
             items.forEach(p => { 
                 const sweUnit = window.translateUnitToSwedish(p.unit);
-                waTxt += `• ${p.name}: *${p.orderQty} ${sweUnit}*\n`; 
+                waTxt += `• *${p.name.toUpperCase()}*  ->  *${p.orderQty} ${sweUnit.toUpperCase()}*\n`; 
             });
             waTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
 
-            let mailTxt = `BESTÄLLNING MAGARI - ${locName.toUpperCase()}\n`;
-            mailTxt += `========================================\n`;
-            mailTxt += `👤 BESTÄLLARE: ${op}\n`;
-            mailTxt += `🚚 ÖNSKAT LEVERANSDATUM: ${dateVal}\n`;
-            if (noteText.trim()) mailTxt += `💬 ANTECKNING: ${noteText.trim().toUpperCase()}\n`;
-            mailTxt += `========================================\n\n`;
-            mailTxt += `PRODUKTER:\n`;
+            let mailTxt = `BESTÄLLNING MAGARI - ${locName.toUpperCase()}\n\n`;
+            mailTxt += `BESTÄLLARE: ${op.toUpperCase()}\n`;
+            mailTxt += `ÖNSKAT LEVERANSDATUM: ${dateVal}\n`;
+            if (noteText.trim()) mailTxt += `ANTECKNING: ${noteText.trim()}\n`;
+            mailTxt += `\nPRODUKTER:\n`;
             items.forEach(p => { 
                 const sweUnit = window.translateUnitToSwedish(p.unit);
-                mailTxt += `• ${p.name}: ${p.orderQty} ${sweUnit}\n`; 
+                mailTxt += `• ${p.name.toUpperCase()}  ->  ${p.orderQty} ${sweUnit.toUpperCase()}\n`; 
             });
             mailTxt += `\nMed vänliga hälsningar,\nMagari ${locName}`;
 
