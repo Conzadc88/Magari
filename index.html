@@ -4,10 +4,10 @@
 <!--
 ====================================================================
 [MAGARI APP - HISTORICAL CHANGELOG REGISTRY & ARCHIVE]
-- v3.8.20 (PRODUZIONE - TOTALI E GRAN TOTALE REPORT CONSUMI):
-  * Aggiunti i totali parziali per le tabelle Alcolici e Cibo.
-  * Aggiunto il Gran Totale complessivo finale in SEK nel Report Consumi.
-  * Mantenuto protocollo nativo WhatsApp, storno giacenze e filtro A-Z.
+- v3.8.21 (PRODUZIONE - SEPARAZIONE CARRELLO ORDINI PER SEDE):
+  * Gestione indipendente delle quantità d'ordine (orderQty) per Vasastan e Östermalm.
+  * Mantenuti i totali parziali e il Gran Totale SEK nel Report Consumi.
+  * Mantenuto link nativo WhatsApp, storno giacenze e filtri A-Z.
 ====================================================================
 -->
     <meta charset="UTF-8">
@@ -16,7 +16,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Magari">
-    <title>Magari v3.8.20</title>
+    <title>Magari v3.8.21</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +31,7 @@
         <div class="page-lock-box" style="max-width: 340px;">
             <div style="font-size: 32px; margin-bottom: 8px;">📍</div>
             <h3 style="margin-bottom: 6px; color: var(--primary);">Seleziona la Sede</h3>
-            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">Seleziona il locale in cui ti trovi per caricare le giacenze corrette.</p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">Seleziona il locale in cui ti trovi per caricare le giacenze e il carrello corretti.</p>
             <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
                 <button class="btn-save" style="padding: 12px; font-size: 14px; background-color: #043927;" onclick="setActiveLocation('Vasastan (Sankt Eriksgatan 110)')">📍 Vasastan<br><span style="font-size:10px; opacity:0.8;">Sankt Eriksgatan 110</span></button>
                 <button class="btn-save" style="padding: 12px; font-size: 14px; background-color: #1b5e20;" onclick="setActiveLocation('Östermalm (Styrmansgatan 52)')">📍 Östermalm<br><span style="font-size:10px; opacity:0.8;">Styrmansgatan 52</span></button>
@@ -45,7 +45,7 @@
         <div class="drawer" id="drawer">
             <div class="drawer-header">
                 <div class="brand-title" style="font-size: 24px;">MAGARI</div>
-                <div class="brand-subtitle" style="font-size: 8px;">v3.8.20 PRODUZIONE</div>
+                <div class="brand-subtitle" style="font-size: 8px;">v3.8.21 PRODUZIONE</div>
             </div>
             <ul class="drawer-menu">
                 <li onclick="navigateTo('ordini')">
@@ -73,7 +73,7 @@
             <button class="menu-btn" onclick="toggleMenu()">☰</button>
             <div class="header-brand-text">
                 <div class="brand-title">MAGARI</div>
-                <div class="brand-subtitle">v3.8.20 PRODUZIONE</div>
+                <div class="brand-subtitle">v3.8.21 PRODUZIONE</div>
             </div>
             <div class="page-badge" id="page-title">Ordini</div>
         </div>
@@ -527,6 +527,7 @@
             return (window.activeLocation && window.activeLocation.includes('Östermalm')) ? 'ostermalm' : 'vasastan';
         };
 
+        // Helper per le giacenze per sede
         window.getQty = function(i) {
             const key = window.getLocationKey();
             return key === 'ostermalm' ? (i.qty_ostermalm ?? 0) : (i.qty_vasastan ?? i.qty ?? 0);
@@ -536,6 +537,18 @@
             const key = window.getLocationKey();
             if (key === 'ostermalm') i.qty_ostermalm = parseFloat(v) || 0;
             else i.qty_vasastan = parseFloat(v) || 0;
+        };
+
+        // Helper per il carrello ordini per sede
+        window.getOrderQty = function(i) {
+            const key = window.getLocationKey();
+            return key === 'ostermalm' ? (i.orderQty_ostermalm ?? 0) : (i.orderQty_vasastan ?? i.orderQty ?? 0);
+        };
+
+        window.setOrderQty = function(i, v) {
+            const key = window.getLocationKey();
+            if (key === 'ostermalm') i.orderQty_ostermalm = parseFloat(v) || 0;
+            else i.orderQty_vasastan = parseFloat(v) || 0;
         };
 
         window.getMin = function(i) {
@@ -841,7 +854,7 @@
         };
 
         window.updateCartBadge = function() {
-            const activeItemsCount = window.inventoryData.filter(i => (i.orderQty || 0) > 0).length;
+            const activeItemsCount = window.inventoryData.filter(i => window.getOrderQty(i) > 0).length;
             const badge = document.getElementById('cart-badge-drawer');
             if (badge) {
                 if (activeItemsCount > 0) {
@@ -987,6 +1000,7 @@
             items.forEach(item => {
                 const sup = window.suppliersData.find(s => String(s.id) === String(item.supplierId));
                 const qty = window.getQty(item), min = window.getMin(item), isLow = qty < min;
+                const orderQty = window.getOrderQty(item);
                 const catEmoji = window.getCategoryEmoji(item.category);
                 c.innerHTML += `
                     <div class="card-item ${isLow ? 'low-stock-alert' : ''}">
@@ -998,7 +1012,7 @@
                         <div class="item-controls">
                             <span style="font-size:13px; font-weight:600; margin-right:auto;">Da Ordinare:</span>
                             <button class="qty-btn" onclick="updateOrder(${item.id}, -1)">-</button>
-                            <input type="number" class="qty-input" value="${item.orderQty || 0}" onchange="setOrder(${item.id}, this.value)">
+                            <input type="number" class="qty-input" value="${orderQty}" onchange="setOrder(${item.id}, this.value)">
                             <span class="unit-label">${item.unit}</span>
                             <button class="qty-btn" onclick="updateOrder(${item.id}, 1)">+</button>
                         </div>
@@ -1009,7 +1023,8 @@
         window.updateOrder = function(id, d) { 
             const i = window.inventoryData.find(x => x.id === id); 
             if(i) { 
-                i.orderQty = Math.max(0, (i.orderQty || 0) + d); 
+                const curr = window.getOrderQty(i);
+                window.setOrderQty(i, Math.max(0, curr + d)); 
                 saveDataToCloud(); 
                 filterOrderItems(); 
                 updateCartBadge();
@@ -1019,7 +1034,7 @@
         window.setOrder = function(id, v) { 
             const i = window.inventoryData.find(x => x.id === id); 
             if(i) { 
-                i.orderQty = Math.max(0, parseFloat(v) || 0); 
+                window.setOrderQty(i, Math.max(0, parseFloat(v) || 0)); 
                 saveDataToCloud(); 
                 updateCartBadge();
             } 
@@ -1032,7 +1047,7 @@
             const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
             if (!dateVal || dateVal < tomorrowStr) return window.showAlert("🚚 La data di consegna deve essere da domani in poi.");
 
-            const items = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
+            const items = window.inventoryData.filter(i => window.getOrderQty(i) > 0);
             if (items.length === 0) return window.showAlert("🛒 Nessun prodotto selezionato.");
 
             window.renderSummaryModalContent(op, dateVal);
@@ -1041,7 +1056,7 @@
         };
 
         window.renderSummaryModalContent = function(op, dateVal) {
-            const items = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
+            const items = window.inventoryData.filter(i => window.getOrderQty(i) > 0);
             let groups = {};
             items.forEach(i => { if(!groups[i.supplierId]) groups[i.supplierId] = []; groups[i.supplierId].push(i); });
             const c = document.getElementById('summary-content'); c.innerHTML = '';
@@ -1064,7 +1079,8 @@
                 emailBody += `PRODUKTER:\n`;
                 
                 groups[sId].forEach(p => { 
-                    emailBody += `• ${p.name.toUpperCase()} -> ${p.orderQty} ${window.translateUnitToSwedish(p.unit).toUpperCase()}\n`; 
+                    const qty = window.getOrderQty(p);
+                    emailBody += `• ${p.name.toUpperCase()} -> ${qty} ${window.translateUnitToSwedish(p.unit).toUpperCase()}\n`; 
                 });
                 
                 emailBody += `\nMed vänliga hälsningar,\nMagari ${window.activeLocation ? window.activeLocation.split(' ')[0] : 'Magari'}`;
@@ -1072,13 +1088,16 @@
                 const mailtoLink = `mailto:${sup?.email || ''}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
                 
                 let waTxt = `*BESTÄLLNING MAGARI - ${locNameClean}*\n👤 Beställare: *${op.toUpperCase()}*\n🚚 Önskat leveransdatum: *${dateVal}*\n\nCiao ${supName},\n\n*PRODUKTER:*\n`;
-                groups[sId].forEach(p => { waTxt += `• *${p.name.toUpperCase()}*  ->  *${p.orderQty} ${window.translateUnitToSwedish(p.unit).toUpperCase()}*\n`; });
+                groups[sId].forEach(p => { 
+                    const qty = window.getOrderQty(p);
+                    waTxt += `• *${p.name.toUpperCase()}*  ->  *${qty} ${window.translateUnitToSwedish(p.unit).toUpperCase()}*\n`; 
+                });
                 waTxt += `\nMed vänliga hälsningar,\nMagari`;
                 
                 const cleanPhone = (sup?.phone || '').replace(/[^0-9]/g,'');
                 const wa = `whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(waTxt)}`;
 
-                let itemsListHtml = groups[sId].map(p => `• <b>${p.name.toUpperCase()}</b>  ->  <span style="color:var(--primary);">${p.orderQty} ${window.translateUnitToSwedish(p.unit).toUpperCase()}</span>`).join('<br>');
+                let itemsListHtml = groups[sId].map(p => `• <b>${p.name.toUpperCase()}</b>  ->  <span style="color:var(--primary);">${window.getOrderQty(p)} ${window.translateUnitToSwedish(p.unit).toUpperCase()}</span>`).join('<br>');
 
                 c.innerHTML += `
                     <div style="background:#f9f9f9; padding:16px; border-radius:10px; margin-bottom:16px; border:1px solid #cbd5e1;">
@@ -1094,7 +1113,7 @@
         };
 
         window.confirmSingleSupplierOrder = function(sId, operator, dateVal) {
-            const items = window.inventoryData.filter(i => String(i.supplierId) === String(sId) && (i.orderQty || 0) > 0);
+            const items = window.inventoryData.filter(i => String(i.supplierId) === String(sId) && window.getOrderQty(i) > 0);
             if (items.length === 0) return;
             const sup = window.suppliersData.find(s => String(s.id) === String(sId));
             const nowStr = new Date().toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -1105,18 +1124,18 @@
                 destination: window.activeLocation || 'Sede Non Specifica',
                 operatorName: operator,
                 supplierName: sup?.name || 'Fornitore',
-                items: items.map(i => ({ id: i.id, name: i.name, qty: i.orderQty, unit: i.unit })),
+                items: items.map(i => ({ id: i.id, name: i.name, qty: window.getOrderQty(i), unit: i.unit })),
                 checked: false,
                 verificationDetails: null
             });
 
-            items.forEach(i => i.orderQty = 0);
+            items.forEach(i => window.setOrderQty(i, 0));
             saveDataToCloud(); refreshAllViews(); closeSummaryModal();
             window.showAlert("✅ Ordine salvato nello storico!");
         };
 
         window.confirmAndSaveOrderToHistory = function(operator) {
-            const items = window.inventoryData.filter(i => (i.orderQty || 0) > 0);
+            const items = window.inventoryData.filter(i => window.getOrderQty(i) > 0);
             if (items.length === 0) return;
             let groups = {};
             items.forEach(i => { if(!groups[i.supplierId]) groups[i.supplierId] = []; groups[i.supplierId].push(i); });
@@ -1130,13 +1149,13 @@
                     destination: window.activeLocation || 'Sede Non Specifica',
                     operatorName: operator,
                     supplierName: sup?.name || 'Fornitore',
-                    items: groups[sId].map(i => ({ id: i.id, name: i.name, qty: i.orderQty, unit: i.unit })),
+                    items: groups[sId].map(i => ({ id: i.id, name: i.name, qty: window.getOrderQty(i), unit: i.unit })),
                     checked: false,
                     verificationDetails: null
                 });
             }
 
-            window.inventoryData.forEach(i => i.orderQty = 0);
+            window.inventoryData.forEach(i => window.setOrderQty(i, 0));
             saveDataToCloud(); refreshAllViews(); closeSummaryModal();
             window.showAlert("🎉 Ordini salvati nello storico!");
         };
@@ -1348,7 +1367,7 @@
                 const item = window.inventoryData.find(x => x.id === parseInt(idVal));
                 if (item) { item.name = name; item.category = cat; item.supplierId = supId; item.price = price; item.unit = unit; }
             } else {
-                window.inventoryData.push({ id: Date.now(), name, category: cat, supplierId: supId, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty: 0, unit, price, qty_vasastan: 0, qty_ostermalm: 0, isFavorite: false });
+                window.inventoryData.push({ id: Date.now(), name, category: cat, supplierId: supId, minQty_vasastan: 2, minQty_ostermalm: 2, orderQty_vasastan: 0, orderQty_ostermalm: 0, unit, price, qty_vasastan: 0, qty_ostermalm: 0, isFavorite: false });
             }
             saveDataToCloud(); refreshAllViews(); closeAddModal();
         };
